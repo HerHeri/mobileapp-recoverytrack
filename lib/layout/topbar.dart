@@ -4,12 +4,51 @@ import '../core/theme/app_theme.dart';
 import '../features/auth/pages/login_page.dart';
 import '../storage/token_storage.dart';
 import '../services/auth_service.dart';
+import '../features/dashboard/pages/dashboard_page.dart';
+import '../features/dashboard/pages/history_log.dart';
+import '../features/dashboard/pages/keyboard_setting_page.dart';
+import '../features/dashboard/pages/payment_page.dart';
 import '../features/dashboard/pages/profile_page.dart';
 
 class TopBar extends StatelessWidget {
   final List<Widget>? actions;
+  final int activeIndex;
+  final Future<void> Function()? onKeyboardSettings;
 
-  const TopBar({super.key, this.actions});
+  const TopBar({
+    super.key,
+    this.actions,
+    required this.activeIndex,
+    this.onKeyboardSettings,
+  });
+
+  static const _menuItems = [
+    _NavigationItem(
+      'Riwayat',
+      'Lihat aktivitas pencarian',
+      Icons.history_rounded,
+    ),
+    _NavigationItem('Pencarian', 'Cari data kendaraan', Icons.search_rounded),
+    _NavigationItem(
+      'Pembayaran',
+      'Paket dan transaksi',
+      Icons.payments_rounded,
+    ),
+    _NavigationItem('Profil', 'Informasi akun Anda', Icons.person_rounded),
+  ];
+
+  void _navigate(BuildContext context, int index) {
+    if (index == activeIndex) return;
+
+    final Widget page = switch (index) {
+      0 => const HistoryLogPage(),
+      1 => const DashboardPage(),
+      2 => const PaymentPage(),
+      _ => const ProfilePage(),
+    };
+
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => page));
+  }
 
   Future<void> logout(BuildContext context) async {
     try {
@@ -29,114 +68,402 @@ class TopBar extends StatelessWidget {
     }
   }
 
+  Future<void> _openKeyboardSettings(BuildContext context) async {
+    if (onKeyboardSettings != null) {
+      await onKeyboardSettings!();
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const KeyboardSettingPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
+      margin: const EdgeInsets.fromLTRB(9, 2, 9, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: isDark
             ? null
             : const LinearGradient(
-                colors: [Color(0xff667eea), Color(0xff764ba2)],
+                colors: [Color(0xFF536DFE), Color(0xFF7C4DFF)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-        color: isDark ? theme.colorScheme.surface : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? theme.colorScheme.surface : Colors.transparent,
-          ),
+        color: isDark ? theme.colorScheme.surface : null,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.2),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4338CA).withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 390;
 
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-        children: [
-          FutureBuilder<PackageInfo>(
-            future: PackageInfo.fromPlatform(),
-            builder: (context, snapshot) {
-              final version = snapshot.data?.version ?? '';
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Suntik Radar",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 16,
+          return Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.track_changes_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snapshot) {
+                    final version = snapshot.data?.version ?? '';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          compact ? "Recovery Track" : "Recovery Track",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            fontSize: 16,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        if (version.isNotEmpty)
+                          Text(
+                            "v$version",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              ...?actions?.map(_actionSurface),
+              _headerButton(
+                tooltip: isDark ? 'Mode terang' : 'Mode gelap',
+                icon: isDark
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+                onPressed: AppTheme.toggleTheme,
+              ),
+              // FutureBuilder<String?>(
+              //   future: TokenStorage.getPhoto(),
+              //   builder: (context, snapshot) {
+              //     final photoUrl = snapshot.data;
+              //     return Tooltip(
+              //       message: 'Profil',
+              //       child: InkWell(
+              //         borderRadius: BorderRadius.circular(14),
+              //         onTap: () => _navigate(context, 3),
+              //         child: Container(
+              //           width: 40,
+              //           height: 40,
+              //           padding: const EdgeInsets.all(5),
+              //           decoration: BoxDecoration(
+              //             color: Colors.white.withValues(alpha: 0.14),
+              //             borderRadius: BorderRadius.circular(14),
+              //           ),
+              //           child: (photoUrl != null && photoUrl.isNotEmpty)
+              //               ? CircleAvatar(
+              //                   backgroundImage: NetworkImage(photoUrl),
+              //                 )
+              //               : const Icon(
+              //                   Icons.person_rounded,
+              //                   color: Colors.white,
+              //                   size: 21,
+              //                 ),
+              //         ),
+              //       ),
+              //     );
+              //   },
+              // ),
+              PopupMenuButton<int>(
+                tooltip: 'Menu',
+                offset: const Offset(0, 52),
+                constraints: const BoxConstraints(minWidth: 360, maxWidth: 360),
+                color: theme.colorScheme.surface,
+                elevation: 16,
+                shadowColor: Colors.black.withValues(alpha: 0.22),
+                clipBehavior: Clip.antiAlias,
+                menuPadding: const EdgeInsets.all(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.55,
                     ),
                   ),
-                  if (version.isNotEmpty)
-                    Text(
-                      "v$version",
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
-                    ),
-                ],
-              );
-            },
-          ),
-          Row(
-            children: [
-              /// TOGGLE THEME
-              ...?actions,
-              IconButton(
-                icon: Icon(
-                  isDark ? Icons.light_mode : Icons.dark_mode,
-                  color: Colors.white,
                 ),
-                onPressed: () {
-                  AppTheme.toggleTheme();
+                onSelected: (value) async {
+                  if (value == -1) {
+                    await logout(context);
+                  } else if (value == 4) {
+                    await _openKeyboardSettings(context);
+                  } else {
+                    _navigate(context, value);
+                  }
                 },
+                itemBuilder: (context) => [
+                  // PopupMenuItem<int>(
+                  //   enabled: false,
+                  //   height: 66,
+                  //   child: _menuHeader(context),
+                  // ),
+                  // const PopupMenuDivider(height: 12),
+                  for (var index = 0; index < _menuItems.length; index++)
+                    PopupMenuItem<int>(
+                      value: index,
+                      height: 62,
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: _menuTile(
+                        context,
+                        _menuItems[index],
+                        index == activeIndex,
+                      ),
+                    ),
+                  const PopupMenuDivider(height: 12),
+                  PopupMenuItem<int>(
+                    value: 4,
+                    height: 62,
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: _menuTile(
+                      context,
+                      const _NavigationItem(
+                        'Setting Keyboard',
+                        'Layout, ukuran, dan getaran',
+                        Icons.keyboard_alt_outlined,
+                      ),
+                      false,
+                    ),
+                  ),
+                  const PopupMenuDivider(height: 12),
+                  PopupMenuItem<int>(
+                    value: -1,
+                    height: 62,
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: _menuTile(
+                      context,
+                      const _NavigationItem(
+                        'Logout',
+                        'Keluar dari akun ini',
+                        Icons.logout_rounded,
+                      ),
+                      false,
+                      destructive: true,
+                    ),
+                  ),
+                ],
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  margin: const EdgeInsets.only(left: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 23,
+                  ),
+                ),
               ),
-              FutureBuilder<String?>(
-                future: TokenStorage.getPhoto(),
-                builder: (context, snapshot) {
-                  final photoUrl = snapshot.data;
-                  return PopupMenuButton<String>(
-                    icon: (photoUrl != null && photoUrl.isNotEmpty)
-                        ? CircleAvatar(
-                            radius: 14,
-                            backgroundImage: NetworkImage(photoUrl),
-                          )
-                        : const Icon(Icons.person, color: Colors.white),
-                    onSelected: (value) async {
-                      if (value == 'profile') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfilePage(),
-                          ),
-                        );
-                      } else if (value == 'logout') {
-                        await logout(context);
-                      }
-                    },
-                    itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<String>>[
-                          const PopupMenuItem<String>(
-                            value: 'profile',
-                            child: ListTile(
-                              leading: Icon(Icons.person_outline),
-                              title: Text('Profil'),
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'logout',
-                            child: ListTile(
-                              leading: Icon(Icons.logout),
-                              title: Text('Logout'),
-                            ),
-                          ),
-                        ],
-                  );
-                },
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _actionSurface(Widget action) {
+    return IconTheme(
+      data: const IconThemeData(color: Colors.white, size: 21),
+      child: SizedBox(width: 40, height: 40, child: action),
+    );
+  }
+
+  Widget _headerButton({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white, size: 21),
+      ),
+    );
+  }
+
+  Widget _menuTile(
+    BuildContext context,
+    _NavigationItem item,
+    bool selected, {
+    bool destructive = false,
+  }) {
+    final color = destructive
+        ? Theme.of(context).colorScheme.error
+        : selected
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.onSurface;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: selected
+            ? Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.7)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: destructive
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.errorContainer.withValues(alpha: 0.7)
+                  : selected
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.14)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Icon(item.icon, color: color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14.5,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: destructive
+                        ? color.withValues(alpha: 0.72)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (selected)
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                color: Theme.of(context).colorScheme.onPrimary,
+                size: 16,
+              ),
+            )
+          else
+            Icon(
+              Icons.chevron_right_rounded,
+              color: themeColor(context).withValues(alpha: 0.38),
+              size: 20,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuHeader(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF536DFE), Color(0xFF7C4DFF)],
+              ),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: const Icon(
+              Icons.grid_view_rounded,
+              color: Colors.white,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Menu Recovery Track',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Pilih halaman atau pengaturan',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -144,4 +471,16 @@ class TopBar extends StatelessWidget {
       ),
     );
   }
+
+  Color themeColor(BuildContext context) {
+    return Theme.of(context).colorScheme.onSurfaceVariant;
+  }
+}
+
+class _NavigationItem {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+
+  const _NavigationItem(this.label, this.subtitle, this.icon);
 }

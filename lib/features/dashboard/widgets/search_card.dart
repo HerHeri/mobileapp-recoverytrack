@@ -25,152 +25,196 @@ class SearchCard extends StatefulWidget {
 }
 
 class _SearchCardState extends State<SearchCard> {
-  static const double _barHeight = 60.0;
-  static const double _barRadius = 32.0;
+  static const double _barHeight = 50;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final hasText = widget.controller.text.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      child: Container(
-        height: _barHeight,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(_barRadius),
-          border: Border.all(color: const Color(0xFF333333), width: 2.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+      padding: const EdgeInsets.fromLTRB(9, 2, 9, 2),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 360;
+
+          return Container(
+            height: _barHeight,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.16)
+                    : const Color(0xFF6D5DFB),
+                width: 1.6,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-          ],
+            child: Row(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: compact ? 14 : 18,
+                    right: compact ? 7 : 12,
+                  ),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: compact ? 24 : 27,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
+                    readOnly: widget.readOnly,
+                    showCursor: true,
+                    textCapitalization: TextCapitalization.characters,
+                    style: TextStyle(
+                      fontSize: compact ? 16 : 18,
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                      widget.onSearch(value, widget.filter);
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Pencarian",
+                      hintStyle: TextStyle(
+                        fontSize: compact ? 15 : 17,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                  ),
+                ),
+                if (hasText)
+                  IconButton(
+                    tooltip: 'Hapus pencarian',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      widget.controller.clear();
+                      setState(() {});
+                      widget.onSearch('', widget.filter);
+                    },
+                    icon: Icon(
+                      Icons.cancel_rounded,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                Container(
+                  width: 1,
+                  height: 20,
+                  margin: EdgeInsets.symmetric(horizontal: compact ? 2 : 5),
+                  color: theme.dividerColor,
+                ),
+                Padding(
+                  padding: EdgeInsets.only(right: compact ? 5 : 9),
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Jenis pencarian',
+                    offset: const Offset(0, 48),
+                    constraints: const BoxConstraints(minWidth: 180),
+                    color: theme.colorScheme.surface,
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    onSelected: widget.onFilterChanged,
+                    itemBuilder: (context) => [
+                      _menuItem("No Plat", "no_polisi"),
+                      _menuItem("No Mesin", "no_mesin"),
+                      _menuItem("No Rangka", "no_rangka"),
+                    ],
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 7 : 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withValues(
+                          alpha: 0.62,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _filterLabel(widget.filter),
+                            style: TextStyle(
+                              fontSize: compact ? 12 : 14,
+                              color: theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.expand_more_rounded,
+                            size: compact ? 18 : 21,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _menuItem(String label, String value) {
+    final theme = Theme.of(context);
+    final isSelected = widget.filter == value;
+
+    return PopupMenuItem<String>(
+      value: value,
+      height: 52,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
         ),
         child: Row(
           children: [
-            // Search icon - large, prominent
-            const Padding(
-              padding: EdgeInsets.only(left: 18, right: 12),
-              child: Icon(Icons.search, size: 28, color: Color(0xFF444444)),
-            ),
-            // Text input
             Expanded(
-              child: TextField(
-                controller: widget.controller,
-                focusNode: widget.focusNode,
-                readOnly: widget.readOnly,
-                showCursor: true,
-                textCapitalization: TextCapitalization.characters,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w500,
-                ),
-                onChanged: (value) {
-                  widget.onSearch(value, widget.filter);
-                },
-                decoration: const InputDecoration(
-                  hintText: "Pencarian",
-                  hintStyle: TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF999999),
-                    fontWeight: FontWeight.w400,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
-            // Clear button
-            if (hasText)
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  widget.controller.clear();
-                  widget.onSearch('', widget.filter);
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 20,
-                    color: Color(0xFF666666),
-                  ),
-                ),
+            if (isSelected)
+              Icon(
+                Icons.check_rounded,
+                size: 19,
+                color: theme.colorScheme.primary,
               ),
-            // Vertical divider
-            Container(
-              width: 1.5,
-              height: 32,
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              color: const Color(0xFFCCCCCC),
-            ),
-            // Dropdown filter
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: PopupMenuButton<String>(
-                offset: const Offset(0, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                color: Colors.white,
-                elevation: 8,
-                onSelected: (v) {
-                  widget.onFilterChanged(v);
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: "no_polisi",
-                    child: _dropdownItem("No Plat", "no_polisi"),
-                  ),
-                  PopupMenuItem(
-                    value: "no_mesin",
-                    child: _dropdownItem("No Mesin", "no_mesin"),
-                  ),
-                  PopupMenuItem(
-                    value: "no_rangka",
-                    child: _dropdownItem("No Rangka", "no_rangka"),
-                  ),
-                ],
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _filterLabel(widget.filter),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF333333),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_drop_down_rounded,
-                        size: 22,
-                        color: Color(0xFF555555),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -179,8 +223,6 @@ class _SearchCardState extends State<SearchCard> {
 
   String _filterLabel(String filter) {
     switch (filter) {
-      case "no_polisi":
-        return "No Plat";
       case "no_mesin":
         return "No Mesin";
       case "no_rangka":
@@ -188,24 +230,5 @@ class _SearchCardState extends State<SearchCard> {
       default:
         return "No Plat";
     }
-  }
-
-  Widget _dropdownItem(String label, String value) {
-    final isSelected = widget.filter == value;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.purple.shade50 : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 16,
-          color: isSelected ? Colors.purple : const Color(0xFF333333),
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-        ),
-      ),
-    );
   }
 }

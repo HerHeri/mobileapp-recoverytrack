@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,11 +12,24 @@ class KeyboardCallbacks {
 }
 
 class CustomKeyboard extends StatelessWidget {
-  final int layoutType; // 1-5
+  /// 1 - 5. Use 0 outside this widget for keyboard bawaan HP.
+  final int layoutType;
+
+  /// Total keyboard frame height from setting page.
+  /// This widget will always scale rows to this height to prevent overflow.
   final double height;
+
+  /// Requested text size from setting page.
+  /// Real font size is auto-limited by key height to prevent overflow.
   final double textSize;
+
   final bool vibrationEnabled;
   final KeyboardCallbacks callbacks;
+  final Color? keyboardBackground;
+  final Color? keyBackground;
+  final Color? actionKeyBackground;
+  final Color? keyBorder;
+  final Color? keyForeground;
 
   const CustomKeyboard({
     super.key,
@@ -23,7 +38,21 @@ class CustomKeyboard extends StatelessWidget {
     required this.textSize,
     required this.vibrationEnabled,
     required this.callbacks,
+    this.keyboardBackground,
+    this.keyBackground,
+    this.actionKeyBackground,
+    this.keyBorder,
+    this.keyForeground,
   });
+
+  Color get _keyboardBg => keyboardBackground ?? const Color(0xFFE6F6FB);
+  Color get _keyBg => keyBackground ?? const Color(0xFFCDECF6);
+  Color get _keyBgAlt => actionKeyBackground ?? const Color(0xFF9FD9EC);
+  Color get _keyBorder => keyBorder ?? const Color(0xFF58B2D2);
+  Color get _textColor => keyForeground ?? const Color(0xFF06384D);
+
+  static const double _gap = 1.0;
+  static const double _radius = 8.0;
 
   void _vibrate() {
     if (vibrationEnabled) {
@@ -31,54 +60,71 @@ class CustomKeyboard extends StatelessWidget {
     }
   }
 
-  double get _fontSize => textSize.clamp(18.0, 32.0);
-
-  double _keyHeight(int totalRows) {
-    // Calculate key height based on available space
-    final available = height - (totalRows + 1) * 5.0 - 12.0;
-    return (available / totalRows).clamp(42.0, 56.0);
+  double _safeFontSize(double keyHeight) {
+    // Keep font inside the key even when user sets textSize too large.
+    final requested = textSize.clamp(18.0, 46.0);
+    return math.min(requested, keyHeight * 0.58).clamp(16.0, 46.0);
   }
 
-  // ─── Shared key builders ───
+  double _safeIconSize(double keyHeight) {
+    return math.min(_safeFontSize(keyHeight) + 8, keyHeight * 0.66);
+  }
 
-  Widget _charKey(String char, double keyH, {double flex = 1}) {
+  double _keyHeight(double maxHeight, int rowCount) {
+    // The old code used a fixed clamp, so several layouts overflowed when the
+    // number of visible rows was more than the value used in _keyHeight().
+    // This version calculates from the real row count.
+    final safeMaxHeight = math.max(80.0, maxHeight);
+    final totalGap = (rowCount - 1) * _gap;
+    final available = safeMaxHeight - totalGap;
+    return math.max(18.0, available / rowCount);
+  }
+
+  Widget _charKey(String char, double keyH, {int flex = 1}) {
     return Expanded(
-      flex: flex.toInt(),
-      child: Container(
+      flex: flex,
+      child: SizedBox(
         height: keyH,
-        margin: const EdgeInsets.all(1.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(
-            color: const Color.fromARGB(255, 228, 84, 84),
-            width: 0.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+        child: Padding(
+          padding: const EdgeInsets.all(0.7),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: _keyBg,
+              borderRadius: BorderRadius.circular(_radius),
+              border: Border.all(color: _keyBorder, width: 0.7),
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(5),
-            onTap: () {
-              _vibrate();
-              callbacks.onChar(char);
-            },
-            child: Center(
-              child: Text(
-                char,
-                style: TextStyle(
-                  fontSize: _fontSize,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  height: 1.0,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(_radius),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(_radius),
+                onTap: () {
+                  _vibrate();
+                  callbacks.onChar(char);
+                },
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      char,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: _safeFontSize(keyH),
+                        fontWeight: FontWeight.w900,
+                        color: _textColor,
+                        height: 1.0,
+                        letterSpacing: 0.3,
+                        shadows: const [
+                          Shadow(
+                            color: Color(0x55000000),
+                            offset: Offset(0.8, 1.0),
+                            blurRadius: 1.2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -89,45 +135,50 @@ class CustomKeyboard extends StatelessWidget {
   }
 
   Widget _actionKey({
-    required String label,
     required VoidCallback onTap,
-    double flex = 1,
-    Color? bgColor,
-    IconData? icon,
     required double keyH,
+    required IconData icon,
+    int flex = 1,
   }) {
-    final color = bgColor ?? const Color(0xFFF0F0F0);
     return Expanded(
-      flex: flex.toInt(),
-      child: Container(
+      flex: flex,
+      child: SizedBox(
         height: keyH,
-        margin: const EdgeInsets.all(1.0),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: const Color(0xFFD0D0D0), width: 0.8),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(5),
-            onTap: () {
-              _vibrate();
-              onTap();
-            },
-            child: Center(
-              child: icon != null
-                  ? Icon(icon, size: _fontSize + 6, color: Colors.black87)
-                  : Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: _fontSize,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
-                        height: 1.0,
-                      ),
+        child: Padding(
+          padding: const EdgeInsets.all(0.7),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: _keyBgAlt,
+              borderRadius: BorderRadius.circular(_radius + 6),
+              border: Border.all(color: _keyBorder, width: 0.8),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(_radius + 6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(_radius + 6),
+                onTap: () {
+                  _vibrate();
+                  onTap();
+                },
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Icon(
+                      icon,
+                      size: _safeIconSize(keyH),
+                      color: _textColor,
+                      shadows: const [
+                        Shadow(
+                          color: Color(0x55000000),
+                          offset: Offset(0.8, 1.0),
+                          blurRadius: 1.2,
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -135,311 +186,269 @@ class CustomKeyboard extends StatelessWidget {
     );
   }
 
-  // ─── Row helper ───
+  Widget _clearKey(double keyH, {int flex = 1}) {
+    return _actionKey(
+      onTap: callbacks.onClear,
+      keyH: keyH,
+      icon: Icons.cancel_outlined,
+      flex: flex,
+    );
+  }
+
+  Widget _backspaceKey(double keyH, {int flex = 1}) {
+    return _actionKey(
+      onTap: () => callbacks.onChar('⌫'),
+      keyH: keyH,
+      icon: Icons.backspace_outlined,
+      flex: flex,
+    );
+  }
+
+  Widget _ghost(double keyH, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: SizedBox(height: keyH),
+    );
+  }
 
   Widget _row(List<Widget> children) {
-    return Row(children: children);
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: children,
+    );
   }
 
-  // ===================================================================
-  // LAYOUT 1: Big 3-column number grid with QWERTY letters below
-  // Style: numbers 3-col grid on top, QWERTY row at bottom
-  // ===================================================================
-  Widget _layout1() {
-    final kH = _keyHeight(4);
+  List<Widget> _withGaps(List<Widget> rows) {
+    final widgets = <Widget>[];
+    for (int i = 0; i < rows.length; i++) {
+      widgets.add(rows[i]);
+      if (i != rows.length - 1) widgets.add(const SizedBox(height: _gap));
+    }
+    return widgets;
+  }
 
+  Widget _column(List<Widget> rows) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Number grid: 1 2 3 / 4 5 6 / 7 8 9 / X 0 ⌫
-        _row([_charKey('1', kH), _charKey('2', kH), _charKey('3', kH)]),
-        _row([_charKey('4', kH), _charKey('5', kH), _charKey('6', kH)]),
-        _row([_charKey('7', kH), _charKey('8', kH), _charKey('9', kH)]),
-        _row([
-          _actionKey(
-            label: 'X',
-            onTap: callbacks.onClear,
-            bgColor: const Color(0xFFFFCDD2),
-            keyH: kH,
-            icon: Icons.close_rounded,
-          ),
-          _charKey('0', kH),
-          _actionKey(
-            label: '⌫',
-            onTap: () => callbacks.onChar('⌫'),
-            bgColor: const Color(0xFFFFE0B2),
-            keyH: kH,
-            icon: Icons.backspace_outlined,
-          ),
-        ]),
-        const SizedBox(height: 4),
-        // QWERTY letters row
-        _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row('ASDFGHJKL'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row('ZXCVBNM'.split('').map((c) => _charKey(c, kH)).toList()),
-      ],
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: _withGaps(rows),
     );
   }
 
   // ===================================================================
-  // LAYOUT 2: QWERTY on top, big numbers at bottom
+  // LAYOUT 1: Full width compact. Angka satu baris, huruf di bawah.
+  // Paling aman untuk menghilangkan space kiri-kanan dan mencegah overflow.
   // ===================================================================
-  Widget _layout2() {
-    final kH = _keyHeight(5);
+  Widget _layout1(double maxH) {
+    const rowCount = 4;
+    final kH = _keyHeight(maxH, rowCount);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // QWERTY rows
-        _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row('ASDFGHJKL'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row([
-          _actionKey(
-            label: 'X',
-            onTap: callbacks.onClear,
-            bgColor: const Color(0xFFFFCDD2),
-            keyH: kH,
-            icon: Icons.close_rounded,
-          ),
-          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-          _actionKey(
-            label: '⌫',
-            onTap: () => callbacks.onChar('⌫'),
-            bgColor: const Color(0xFFFFE0B2),
-            keyH: kH,
-            icon: Icons.backspace_outlined,
-          ),
-        ]),
-        const SizedBox(height: 4),
-        // Big number rows at bottom
-        _row([
-          _charKey('1', kH),
-          _charKey('2', kH),
-          _charKey('3', kH),
-          _charKey('4', kH),
-          _charKey('5', kH),
-        ]),
-        _row([
-          _charKey('6', kH),
-          _charKey('7', kH),
-          _charKey('8', kH),
-          _charKey('9', kH),
-          _charKey('0', kH),
-        ]),
-      ],
-    );
+    return _column([
+      _row('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row([
+        _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH),
+      ]),
+      _row([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ]);
   }
 
   // ===================================================================
-  // LAYOUT 3: Compact full-width single row numbers, QWERTY
-  // Best for small screens
+  // LAYOUT 2: Seperti contoh: numpad besar di atas, QWERTY di bawah.
+  // Clear kiri dan backspace kanan dibuat besar.
   // ===================================================================
-  Widget _layout3() {
-    final kH = _keyHeight(5);
+  Widget _layout2(double maxH) {
+    const rowCount = 6;
+    final kH = _keyHeight(maxH, rowCount);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Single number row 0-9
-        _row('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row('ASDFGHJKL'.split('').map((c) => _charKey(c, kH)).toList()),
-        _row([
-          _actionKey(
-            label: 'X',
-            onTap: callbacks.onClear,
-            bgColor: const Color(0xFFFFCDD2),
-            keyH: kH,
-            icon: Icons.close_rounded,
-          ),
-          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-          _actionKey(
-            label: '⌫',
-            onTap: () => callbacks.onChar('⌫'),
-            bgColor: const Color(0xFFFFE0B2),
-            keyH: kH,
-            icon: Icons.backspace_outlined,
-          ),
-        ]),
-        const SizedBox(height: 2),
-      ],
-    );
+    return _column([
+      _row([
+        _clearKey(kH, flex: 2),
+        _charKey('1', kH),
+        _charKey('2', kH),
+        _charKey('3', kH),
+        _backspaceKey(kH, flex: 2),
+      ]),
+      _row([
+        _ghost(kH, flex: 2),
+        _charKey('4', kH),
+        _charKey('5', kH),
+        _charKey('6', kH),
+        _ghost(kH, flex: 2),
+      ]),
+      _row([
+        _charKey('0', kH, flex: 2),
+        _charKey('7', kH),
+        _charKey('8', kH),
+        _charKey('9', kH),
+        _charKey('0', kH, flex: 2),
+      ]),
+      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row([
+        _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH),
+      ]),
+      _row([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ]);
   }
 
   // ===================================================================
-  // LAYOUT 4: Numbers on left side, letters on right (two-panel)
-  // Good for one-hand input
+  // LAYOUT 3: Angka satu baris + QWERTY besar. Cocok layar kecil.
   // ===================================================================
-  Widget _layout4() {
-    final kH = _keyHeight(5);
+  Widget _layout3(double maxH) {
+    const rowCount = 5;
+    final kH = _keyHeight(maxH, rowCount);
 
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Left: 3-column numpad
-          SizedBox(
-            width: 120,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  children: [
-                    _charKey('1', kH),
-                    _charKey('2', kH),
-                    _charKey('3', kH),
-                  ],
-                ),
-                Row(
-                  children: [
-                    _charKey('4', kH),
-                    _charKey('5', kH),
-                    _charKey('6', kH),
-                  ],
-                ),
-                Row(
-                  children: [
-                    _charKey('7', kH),
-                    _charKey('8', kH),
-                    _charKey('9', kH),
-                  ],
-                ),
-                Row(
-                  children: [
-                    _actionKey(
-                      label: 'X',
-                      onTap: callbacks.onClear,
-                      bgColor: const Color(0xFFFFCDD2),
-                      keyH: kH,
-                      icon: Icons.close_rounded,
-                    ),
-                    _charKey('0', kH),
-                    _actionKey(
-                      label: '⌫',
-                      onTap: () => callbacks.onChar('⌫'),
-                      bgColor: const Color(0xFFFFE0B2),
-                      keyH: kH,
-                      icon: Icons.backspace_outlined,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 2),
-          // Right: QWERTY
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _row(
-                  'QWERTY'.split('').map((c) => _charKey(c, kH)).toList(),
-                ),
-                _row(
-                  'UIOP'.split('').map((c) => _charKey(c, kH)).toList(),
-                ),
-                _row('ASDFGH'.split('').map((c) => _charKey(c, kH)).toList()),
-                _row('JKL'.split('').map((c) => _charKey(c, kH)).toList()),
-                _row('ZXCVBNM'.split('').map((c) => _charKey(c, kH)).toList()),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return _column([
+      _row('12345'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row('67890'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row([
+        _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH),
+      ]),
+      _row([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ]);
   }
 
   // ===================================================================
-  // LAYOUT 5: Full-width large key keyboard, most spacious & clean
-  // No CARI button. Clear/Backspace large at sides.
+  // LAYOUT 4: Huruf di atas, angka grid besar di bawah.
   // ===================================================================
-  Widget _layout5() {
-    final kH = _keyHeight(5);
+  Widget _layout4(double maxH) {
+    const rowCount = 6;
+    final kH = _keyHeight(maxH, rowCount);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Row 1: 1-5
-        _row([
-          _charKey('1', kH),
-          _charKey('2', kH),
-          _charKey('3', kH),
-          _charKey('4', kH),
-          _charKey('5', kH),
-        ]),
-        // Row 2: 6-0
-        _row([
-          _charKey('6', kH),
-          _charKey('7', kH),
-          _charKey('8', kH),
-          _charKey('9', kH),
-          _charKey('0', kH),
-        ]),
-        // Row 3: Q-P
-        _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        // Row 4: A-L with clear at start & backspace at end
-        _row([
-          _actionKey(
-            label: 'X',
-            onTap: callbacks.onClear,
-            bgColor: const Color(0xFFFFCDD2),
-            keyH: kH,
-            icon: Icons.close_rounded,
-          ),
-          ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-          _actionKey(
-            label: '⌫',
-            onTap: () => callbacks.onChar('⌫'),
-            bgColor: const Color(0xFFFFE0B2),
-            keyH: kH,
-            icon: Icons.backspace_outlined,
-          ),
-        ]),
-        // Row 5: Z-M + space
-        _row([
-          _actionKey(
-            label: '',
-            onTap: () => callbacks.onChar(' '),
-            bgColor: Colors.white,
-            keyH: kH,
-            icon: Icons.space_bar,
-          ),
-          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-        ]),
-      ],
-    );
+    return _column([
+      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row([
+        _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH),
+      ]),
+      _row([
+        _ghost(kH, flex: 2),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH, flex: 2),
+      ]),
+      _row([
+        _clearKey(kH, flex: 2),
+        _charKey('1', kH),
+        _charKey('2', kH),
+        _charKey('3', kH),
+        _backspaceKey(kH, flex: 2),
+      ]),
+      _row([
+        _ghost(kH, flex: 2),
+        _charKey('4', kH),
+        _charKey('5', kH),
+        _charKey('6', kH),
+        _ghost(kH, flex: 2),
+      ]),
+      _row([
+        _charKey('0', kH, flex: 2),
+        _charKey('7', kH),
+        _charKey('8', kH),
+        _charKey('9', kH),
+        _charKey('0', kH, flex: 2),
+      ]),
+    ]);
   }
 
-  // ─── Build layout based on type ───
-  Widget _buildLayout() {
+  // ===================================================================
+  // LAYOUT 5: Angka grid tanpa tombol kiri, backspace kanan besar.
+  // ===================================================================
+  Widget _layout5(double maxH) {
+    const rowCount = 6;
+    final kH = _keyHeight(maxH, rowCount);
+
+    return _column([
+      _row([
+        _charKey('1', kH),
+        _charKey('2', kH),
+        _charKey('3', kH),
+        _backspaceKey(kH, flex: 2),
+      ]),
+      _row([
+        _charKey('4', kH),
+        _charKey('5', kH),
+        _charKey('6', kH),
+        _charKey('0', kH, flex: 2),
+      ]),
+      _row([
+        _charKey('7', kH),
+        _charKey('8', kH),
+        _charKey('9', kH),
+        _clearKey(kH, flex: 2),
+      ]),
+      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _row([
+        _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        _ghost(kH),
+      ]),
+      _row([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ]);
+  }
+
+  Widget _buildLayout(double maxH) {
     switch (layoutType) {
       case 1:
-        return _layout1();
+        return _layout1(maxH);
       case 2:
-        return _layout2();
+        return _layout2(maxH);
       case 3:
-        return _layout3();
+        return _layout3(maxH);
       case 4:
-        return _layout4();
+        return _layout4(maxH);
       case 5:
-        return _layout5();
+        return _layout5(maxH);
       default:
-        return _layout1();
+        return _layout1(maxH);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEEEEE),
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade300, width: 1.0),
+    final safeHeight = height.clamp(120.0, 420.0);
+
+    return SizedBox(
+      width: double.infinity,
+      height: safeHeight,
+      child: ClipRect(
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: _keyboardBg),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxH = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : safeHeight;
+
+              return SizedBox.expand(child: _buildLayout(maxH));
+            },
+          ),
         ),
       ),
-      child: _buildLayout(),
     );
   }
 }

@@ -206,7 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(9),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -225,10 +225,7 @@ class _ProfilePageState extends State<ProfilePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff764ba2),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
               ),
             ),
           ],
@@ -275,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
       onRefresh: _fetchProfile,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(9),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -283,17 +280,17 @@ class _ProfilePageState extends State<ProfilePage> {
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(5),
               ),
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xff667eea), Color(0xff764ba2)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 child: Row(
                   children: [
@@ -371,10 +368,10 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildSectionTitle("Status Layanan"),
             Card(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(5),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(9),
                 child: Column(
                   children: [
                     _infoRow(Icons.star_outline, "Paket Aktif", paketName),
@@ -399,10 +396,10 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildSectionTitle("Ubah Profil"),
             Card(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(5),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(9),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -493,9 +490,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xff764ba2),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(5),
                             ),
                           ),
                           child: _isSaving
@@ -545,13 +542,18 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 0),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey),
+          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(
+            label,
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          ),
           const Spacer(),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],

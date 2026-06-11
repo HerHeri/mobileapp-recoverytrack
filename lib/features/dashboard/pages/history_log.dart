@@ -164,7 +164,10 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
               ? "Tidak ada hasil untuk \"${_searchController.text.trim()}\"."
               : "Belum ada riwayat pencarian.",
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 15,
+          ),
         ),
       );
     }

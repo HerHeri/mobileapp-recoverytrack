@@ -152,7 +152,16 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
                   _buildInfoRow("Tipe Motor", data['type_motor'] ?? "-"),
                   _buildInfoRow("No Mesin", data['no_mesin'] ?? "-"),
                   _buildInfoRow("No Rangka", data['no_rangka'] ?? "-"),
-                  _buildInfoRow("Nama STNK", data['nama_stnk'] ?? "-"),
+                  _buildInfoRow(
+                    "Finance",
+                    _valueFrom(data, const ['nama_leasing', 'leasing']),
+                  ),
+                  _buildInfoRow(
+                    "Cabang",
+                    _valueFrom(data, const ['nama_cabang', 'cabang']),
+                  ),
+                  _buildInfoRow("Ovd", data['ovd'] ?? "-"),
+                  _buildInfoRow("No Kontrak", data['nomor_kontrak'] ?? "-"),
                 ]),
                 const SizedBox(height: 20),
                 Card(
@@ -293,12 +302,22 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
     );
   }
 
+  String _valueFrom(Map<dynamic, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return "-";
+  }
+
   Widget _buildInfoCard(List<Widget> children) {
+    final theme = Theme.of(context);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -317,7 +336,12 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,

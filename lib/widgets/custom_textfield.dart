@@ -38,9 +38,29 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
       decoration: InputDecoration(
         prefixIcon: Icon(widget.icon),
-
         hintText: widget.hint,
-
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 1.6,
+          ),
+        ),
         suffixIcon: widget.obscure
             ? IconButton(
                 icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),

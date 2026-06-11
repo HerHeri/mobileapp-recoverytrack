@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../layout/main_layout.dart';
 import '../widgets/search_card.dart';
-import '../widgets/meta_bar.dart';
 import '../widgets/result_card.dart';
 import '../widgets/typing_hint.dart';
 import '../../../models/kendaraan.dart';
@@ -48,6 +46,7 @@ class _DashboardPageState extends State<DashboardPage>
 
   // Debounce
   Timer? _debounce;
+  Timer? _focusTimer;
   bool _updateChecked = false;
 
   @override
@@ -85,6 +84,19 @@ class _DashboardPageState extends State<DashboardPage>
     }
 
     _applyKeepScreenOn(keepScreenOn);
+    _scheduleSearchFocus();
+  }
+
+  void _scheduleSearchFocus() {
+    _focusTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusTimer = Timer(const Duration(milliseconds: 180), () {
+        if (mounted && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
+      });
+    });
   }
 
   void _applyKeepScreenOn(bool enable) {
@@ -156,7 +168,7 @@ class _DashboardPageState extends State<DashboardPage>
       );
 
       if (updateData != null && mounted) {
-        showDialog(
+        await showDialog(
           context: context,
           barrierDismissible: false,
           builder: (_) => UpdateDialog(
@@ -166,6 +178,8 @@ class _DashboardPageState extends State<DashboardPage>
         );
       }
     } catch (_) {}
+
+    _scheduleSearchFocus();
   }
 
   // --- Custom keyboard callbacks ---
@@ -224,10 +238,11 @@ class _DashboardPageState extends State<DashboardPage>
         _keyboardVisible = true;
       });
       _animController.forward();
+      _scheduleSearchFocus();
     }
   }
 
-  void _openSettings() async {
+  Future<void> _openSettings() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const KeyboardSettingPage()),
@@ -238,6 +253,7 @@ class _DashboardPageState extends State<DashboardPage>
   @override
   void dispose() {
     _debounce?.cancel();
+    _focusTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _animController.dispose();
@@ -245,165 +261,192 @@ class _DashboardPageState extends State<DashboardPage>
     super.dispose();
   }
 
-  double _maxKeyboardHeight(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    return screenHeight * 0.38;
-  }
-
   @override
   Widget build(BuildContext context) {
     final isCustomKeyboard = _keyboardType > 0;
-    final finalKeyboardHeight = max<double>(
-      160,
-      min(_keyboardHeight, _maxKeyboardHeight(context)),
-    );
+    final theme = Theme.of(context);
 
     return MainLayout(
       activeIndex: 1,
-      appBarActions: [
-        IconButton(
-          icon: const Icon(Icons.settings),
-          tooltip: "Setting Keyboard",
-          onPressed: _openSettings,
-        ),
-      ],
+      contentPadding: EdgeInsets.zero,
+      onKeyboardSettings: _openSettings,
       child: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            // --- Results area (Expanded so it takes remaining space) ---
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _errorMessage != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              size: 80,
-                              color: Colors.red[300],
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              "Akses Dibatasi",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xff2d3436),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const searchAreaHeight = 76.0;
+            const keyboardToggleHeight = 28.0;
+            const minimumResultHeight = 90.0;
+            final availableKeyboardHeight =
+                (constraints.maxHeight -
+                        searchAreaHeight -
+                        keyboardToggleHeight -
+                        minimumResultHeight)
+                    .clamp(120.0, 420.0);
+            final finalKeyboardHeight = _keyboardHeight.clamp(
+              120.0,
+              availableKeyboardHeight,
+            );
+
+            return Column(
+              children: [
+                // --- Results area (Expanded so it takes remaining space) ---
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, resultConstraints) {
+                      final compactResults = resultConstraints.maxHeight < 230;
+
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(9, 2, 9, 0),
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _errorMessage != null
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        size: 80,
+                                        color: Colors.red[300],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        "Akses Dibatasi",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        _errorMessage!,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : !_hasSearched
+                            ? TypingHint(compact: compactResults)
+                            : _results.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.search_off_rounded,
+                                      size: 64,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "Data tidak ditemukan",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _results.length,
+                                itemBuilder: (context, index) {
+                                  return ResultCard(
+                                    kendaraan: _results[index],
+                                    meta: _meta,
+                                    compact: compactResults,
+                                  );
+                                },
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+                      );
+                    },
+                  ),
+                ),
+
+                // --- Search card (compact) ---
+                SearchCard(
+                  onSearch: _handleSearch,
+                  controller: _controller,
+                  filter: _filter,
+                  onFilterChanged: (v) {
+                    setState(() => _filter = v);
+                    _handleSearch(_controller.text, v);
+                  },
+                  readOnly: isCustomKeyboard && _keyboardVisible,
+                  focusNode: _focusNode,
+                  textSize: _textSize,
+                ),
+
+                // --- Keyboard toggle (only when custom) ---
+                if (isCustomKeyboard)
+                  GestureDetector(
+                    onTap: _toggleKeyboard,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        _keyboardVisible
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_up,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+
+                // --- Custom Keyboard ---
+                if (isCustomKeyboard)
+                  SizeTransition(
+                    sizeFactor: _animSlide,
+                    alignment: Alignment.bottomCenter,
+                    child: SafeArea(
+                      top: false,
+                      bottom: false,
+                      left: false,
+                      right: false,
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.bottomCenter,
+                        child: CustomKeyboard(
+                          layoutType: _keyboardType,
+                          height: finalKeyboardHeight,
+                          textSize: _textSize,
+                          vibrationEnabled: _vibrationEnabled,
+                          keyboardBackground:
+                              theme.colorScheme.surfaceContainerLow,
+                          keyBackground:
+                              theme.colorScheme.surfaceContainerHighest,
+                          actionKeyBackground:
+                              theme.colorScheme.primaryContainer,
+                          keyBorder: theme.colorScheme.outlineVariant,
+                          keyForeground: theme.colorScheme.onSurface,
+                          callbacks: KeyboardCallbacks(
+                            onClear: _onClear,
+                            onChar: _onChar,
+                          ),
                         ),
                       ),
-                    )
-                  : !_hasSearched
-                  ? ListView(children: const [TypingHint()])
-                  : _results.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            "Data tidak ditemukan",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _results.length,
-                      itemBuilder: (context, index) {
-                        return ResultCard(
-                          kendaraan: _results[index],
-                          meta: _meta,
-                        );
-                      },
-                    ),
-            ),
-
-            // --- Meta bar ---
-            MetaBar(meta: _meta, isLoading: _isLoading),
-
-            // --- Search card (compact) ---
-            SearchCard(
-              onSearch: _handleSearch,
-              controller: _controller,
-              filter: _filter,
-              onFilterChanged: (v) {
-                setState(() => _filter = v);
-                _handleSearch(_controller.text, v);
-              },
-              readOnly: isCustomKeyboard && _keyboardVisible,
-              focusNode: isCustomKeyboard ? _focusNode : null,
-              textSize: _textSize,
-            ),
-
-            // --- Keyboard toggle (only when custom) ---
-            if (isCustomKeyboard)
-              GestureDetector(
-                onTap: _toggleKeyboard,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  color: Colors.grey.shade100,
-                  child: Icon(
-                    _keyboardVisible
-                        ? Icons.keyboard_arrow_down
-                        : Icons.keyboard_arrow_up,
-                    color: Colors.grey.shade600,
-                    size: 20,
-                  ),
-                ),
-              ),
-
-            // --- Custom Keyboard ---
-            if (isCustomKeyboard)
-              SizeTransition(
-                sizeFactor: _animSlide,
-                alignment: Alignment.bottomCenter,
-                child: SafeArea(
-                  top: false,
-                  bottom: false,
-                  left: false,
-                  right: false,
-                  child: CustomKeyboard(
-                    layoutType: _keyboardType,
-                    height: finalKeyboardHeight,
-                    textSize: _textSize,
-                    vibrationEnabled: _vibrationEnabled,
-                    callbacks: KeyboardCallbacks(
-                      onClear: _onClear,
-                      onChar: _onChar,
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

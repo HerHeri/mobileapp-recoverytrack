@@ -203,6 +203,14 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
                 _buildInfoRow("No Polisi", data['no_polisi'] ?? "-"),
                 _buildInfoRow("No Mesin", data['no_mesin'] ?? "-"),
                 _buildInfoRow("No Rangka", data['no_rangka'] ?? "-"),
+                _buildInfoRow(
+                  "Finance",
+                  _valueFrom(data, const ['nama_leasing', 'leasing']),
+                ),
+                _buildInfoRow(
+                  "Cabang",
+                  _valueFrom(data, const ['nama_cabang', 'cabang']),
+                ),
                 _buildInfoRow("Waktu", data['created_at'] ?? "-"),
               ]),
               const SizedBox(height: 20),
@@ -339,12 +347,22 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
     );
   }
 
+  String _valueFrom(Map<dynamic, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return "-";
+  }
+
   Widget _buildInfoCard(List<Widget> children) {
+    final theme = Theme.of(context);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -363,7 +381,12 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,

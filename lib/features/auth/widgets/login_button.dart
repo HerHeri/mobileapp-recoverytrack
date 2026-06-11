@@ -14,16 +14,23 @@ class LoginButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-
-      child: ElevatedButton(
+      child: FilledButton.icon(
         onPressed: onPressed,
-        child: isLoading
+        icon: isLoading
             ? const SizedBox(
-                height: 20,
-                width: 20,
+                height: 19,
+                width: 19,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text("Masuk"),
+            : const Icon(Icons.login_rounded, size: 19),
+        label: Text(isLoading ? 'Memproses...' : 'Masuk'),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
     );
   }

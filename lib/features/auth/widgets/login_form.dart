@@ -11,6 +11,7 @@ import '../../../storage/token_storage.dart';
 import '../../dashboard/pages/dashboard_page.dart';
 import '../pages/forgot_password_page.dart';
 import '../pages/terms_page.dart';
+import '../pages/register_page.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -22,7 +23,6 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
 
-  bool remember = false;
   bool isLoading = false;
 
   final emailController = TextEditingController();
@@ -138,52 +138,20 @@ class _LoginFormState extends State<LoginForm> {
 
           const SizedBox(height: 12),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-            children: [
-              Row(
-                children: [
-                  // Checkbox(
-                  //   value: remember,
-                  //   onChanged: (v) {
-                  //     setState(() {
-                  //       remember = v!;
-                  //     });
-                  //   },
-                  // ),
-
-                  // const Text("Ingat saya"),
-                ],
-              ),
-
-              // text redirect register
-              // TextButton(
-              //   onPressed: () {
-              //     Navigator.push(
-              //       context,
-              //       MaterialPageRoute(
-              //         builder: (_) => const RegisterPage(),
-              //       ),
-              //     );
-              //   },
-              //   child: const Text("Daftar"),
-              // ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ForgotPasswordPage(),
-                    ),
-                  );
-                },
-                child: const Text("Lupa password?"),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                );
+              },
+              child: const Text("Lupa password?"),
+            ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           LoginButton(
             onPressed: isLoading
@@ -194,6 +162,46 @@ class _LoginFormState extends State<LoginForm> {
                     }
                   },
             isLoading: isLoading,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  'atau',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Belum punya akun?',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              TextButton(
+                onPressed: isLoading
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterPage(),
+                          ),
+                        );
+                      },
+                child: const Text('Daftar'),
+              ),
+            ],
           ),
         ],
       ),

@@ -4,6 +4,7 @@ class Kendaraan {
   final String? noRangka;
   final String? typeMotor;
   final String? namaStnk;
+  final String? leasing;
   final String? cabang;
 
   Kendaraan({
@@ -12,6 +13,7 @@ class Kendaraan {
     this.noRangka,
     this.typeMotor,
     this.namaStnk,
+    this.leasing,
     this.cabang,
   });
 
@@ -22,7 +24,8 @@ class Kendaraan {
       noRangka: json['no_rangka'],
       typeMotor: json['type_motor'],
       namaStnk: json['nama_stnk'],
-      cabang: json['cabang'],
+      leasing: json['nama_leasing'] ?? json['leasing'],
+      cabang: json['nama_cabang'] ?? json['cabang'],
     );
   }
 }

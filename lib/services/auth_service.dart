@@ -2,12 +2,93 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../core/api_config.dart';
 import '../storage/token_storage.dart';
 
 class AuthService {
   static String get _base => ApiConfig.baseUrl;
   static String get _authBase => ApiConfig.authPath;
+
+  /// POST /v1/auth/register
+  static Future<Map<String, dynamic>> register({
+    required String name,
+    required String email,
+    required String phone,
+    required String nik,
+    required String password,
+    required String passwordConfirmation,
+    required String alamat,
+    required String domisili,
+    required XFile ktpPhoto,
+    required XFile selfieKtpPhoto,
+    required XFile suratTugasPhoto,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_authBase/register'),
+    );
+    request.headers['Accept'] = 'application/json';
+    request.fields.addAll({
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'nik': nik,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+      'alamat': alamat,
+      'domisili': domisili,
+    });
+
+    Future<http.MultipartFile> filePart(String field, XFile file) async {
+      return http.MultipartFile.fromBytes(
+        field,
+        await file.readAsBytes(),
+        filename: file.name,
+      );
+    }
+
+    request.files.addAll([
+      await filePart('ktp_photo', ktpPhoto),
+      await filePart('selfie_ktp_photo', selfieKtpPhoto),
+      await filePart('surat_tugas_photo', suratTugasPhoto),
+    ]);
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final dynamic decoded = jsonDecode(response.body);
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data;
+      }
+
+      final validationErrors = data['errors'];
+      if (validationErrors is Map) {
+        final messages = validationErrors.values
+            .expand(
+              (value) => value is List
+                  ? value.map((item) => item.toString())
+                  : [value.toString()],
+            )
+            .toList();
+        if (messages.isNotEmpty) {
+          throw Exception(messages.join('\n'));
+        }
+      }
+
+      throw Exception(
+        data['message'] ?? 'Registrasi gagal diproses (${response.statusCode})',
+      );
+    } on http.ClientException {
+      throw Exception('Masalah koneksi jaringan. Pastikan internet aktif.');
+    } on FormatException {
+      throw Exception('Respon server bukan format JSON yang valid.');
+    }
+  }
 
   /// POST /v1/auth/login
   static Future<Map<String, dynamic>> login(
