@@ -1,6 +1,6 @@
 {
-    "name": "suntik_radar",
-    "short_name": "suntik_radar",
+    "name": "recovery_track",
+    "short_name": "recovery_track",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

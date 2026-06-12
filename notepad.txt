@@ -1,0 +1,14 @@
+next update 1.0.9+9
+
+1. Hilangin muter loading dan card mulai mengetik
+2. Hilangkan lihat detail dan simbol mata tulisan nopol pada layar pengetikan di pencarian
+3. Percepat proses pencarian dan ketika klik detail kendaraan 
+4. Pada detail kendaraan tambahkan
+    a. Tahun,
+    b. No Hp,
+    c. Warna
+5. Template detail kendaraan ada perubahan
+    a. kode leasing dan kode cabang di hilangkan
+    b. tambahkan kolom warna,
+    c. tambahkan kolom tahun,
+    d. tambahkan kolom no hp

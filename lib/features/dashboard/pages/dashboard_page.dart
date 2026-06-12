@@ -5,7 +5,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../layout/main_layout.dart';
 import '../widgets/search_card.dart';
 import '../widgets/result_card.dart';
-import '../widgets/typing_hint.dart';
 import '../../../models/kendaraan.dart';
 import '../../../services/kendaraan_service.dart';
 import '../../../services/update_service.dart';
@@ -48,6 +47,7 @@ class _DashboardPageState extends State<DashboardPage>
   Timer? _debounce;
   Timer? _focusTimer;
   bool _updateChecked = false;
+  int _searchRequestId = 0;
 
   @override
   void initState() {
@@ -113,10 +113,12 @@ class _DashboardPageState extends State<DashboardPage>
 
   // --- Search logic with debounce ---
   Future<void> _handleSearch(String query, String filter) async {
-    // Cancel any pending debounce
     _debounce?.cancel();
+    final normalizedQuery = query.trim();
+    final requestId = ++_searchRequestId;
 
-    if (query.isEmpty) {
+    if (normalizedQuery.length < 2) {
+      KendaraanService.cancelSearch();
       setState(() {
         _results = [];
         _meta = null;
@@ -127,24 +129,30 @@ class _DashboardPageState extends State<DashboardPage>
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _hasSearched = true;
-    });
+    _debounce = Timer(const Duration(milliseconds: 120), () async {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _hasSearched = true;
+      });
 
-    // Debounce 500ms
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final response = await KendaraanService.search(query, field: filter);
-        if (!mounted) return;
+        final response = await KendaraanService.search(
+          normalizedQuery,
+          field: filter,
+        );
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _results = response['data'] as List<Kendaraan>;
           _meta = response['meta'] as SearchMeta;
           _isLoading = false;
         });
+        unawaited(ResultCard.preloadLocation());
+      } on SearchCancelledException {
+        // A newer query has replaced this request.
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _isLoading = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -253,6 +261,8 @@ class _DashboardPageState extends State<DashboardPage>
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchRequestId++;
+    KendaraanService.cancelSearch();
     _focusTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
@@ -298,9 +308,7 @@ class _DashboardPageState extends State<DashboardPage>
 
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(9, 2, 9, 0),
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : _errorMessage != null
+                        child: _errorMessage != null
                             ? Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(24.0),
@@ -338,30 +346,36 @@ class _DashboardPageState extends State<DashboardPage>
                                 ),
                               )
                             : !_hasSearched
-                            ? TypingHint(compact: compactResults)
+                            ? const SizedBox.shrink()
                             : _results.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.search_off_rounded,
-                                      size: 64,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      "Data tidak ditemukan",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.w500,
+                            ? _isLoading
+                                  ? const SizedBox.shrink()
+                                  : Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.search_off_rounded,
+                                            size: 64,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            "Data tidak ditemukan",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              )
+                                    )
                             : ListView.builder(
                                 itemCount: _results.length,
                                 itemBuilder: (context, index) {

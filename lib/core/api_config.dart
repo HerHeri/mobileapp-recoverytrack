@@ -1,8 +1,13 @@
 class ApiConfig {
   ApiConfig._();
 
+  static const String apiOrigin = 'https://api.suntikradar.com';
+
   /// Base URL for desktop & mobile API (Bearer token, non-cookie)
-  static const String baseUrl = 'https://api.suntikradar.com/v1';
+  static const String baseUrl = '$apiOrigin/v1';
+
+  static const String websiteSettingsUrl =
+      '$apiOrigin/api/admin/website-settings';
 
   /// Auth sub-path
   static const String authPath = '$baseUrl/auth';

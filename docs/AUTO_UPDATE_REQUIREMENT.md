@@ -12,7 +12,7 @@ CREATE TABLE app_versions (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     version VARCHAR(20) NOT NULL,           -- Contoh: "1.0.1"
     version_code INT NOT NULL,              -- Contoh: 2 (integer, naik setiap release)
-    filename VARCHAR(255) NOT NULL,         -- Nama file APK: "suntikradar-v1.0.1.apk"
+    filename VARCHAR(255) NOT NULL,         -- Nama file APK: "rt-v1.0.1.apk"
     file_size BIGINT NULL,                  -- Ukuran file dalam bytes (opsional)
     changelog TEXT NULL,                    -- Catatan perubahan (What's New)
     force_update TINYINT(1) DEFAULT 0,      -- 0 = opsional, 1 = wajib update
@@ -228,4 +228,4 @@ location /downloads/ {
 - **force_update** = false: User bisa pilih "Nanti Saja" untuk menunda update.
 - Setiap kali upload APK baru ke `public/downloads/`, jangan lupa insert record ke `app_versions`.
 - File APK lama di folder `public/downloads/` sebaiknya tetap disimpan (jangan dihapus) untuk memudahkan rollback jika diperlukan.
-- Hotfix 1: Kalau nama APK bisa konflik, beri nama dengan versi: `suntikradar-v1.0.1.apk`, `suntikradar-v1.0.2.apk`.
+- Hotfix 1: Kalau nama APK bisa konflik, beri nama dengan versi: `rt-v1.0.1.apk`, `rt-v1.0.2.apk`.

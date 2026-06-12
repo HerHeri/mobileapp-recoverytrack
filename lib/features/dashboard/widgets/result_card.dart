@@ -16,66 +16,42 @@ class ResultCard extends StatefulWidget {
     this.compact = false,
   });
 
+  static Future<void> preloadLocation() async {
+    await _LocationCache.get(requestPermission: false);
+  }
+
   @override
   State<ResultCard> createState() => _ResultCardState();
 }
 
 class _ResultCardState extends State<ResultCard> {
-  bool _isLogging = false;
-
-  Future<Position?> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return null;
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return null;
-    }
-
-    if (permission == LocationPermission.deniedForever) return null;
-
-    return await Geolocator.getCurrentPosition();
+  void _handleViewDetail() {
+    final locationFuture = _LocationCache.get(requestPermission: true);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchLogDetailPage(
+          logData: {'data': widget.kendaraan.toDetailJson()},
+          locationFuture: locationFuture,
+          logFuture: _createLocationLog(locationFuture),
+        ),
+      ),
+    );
   }
 
-  Future<void> _handleViewDetail() async {
-    setState(() => _isLogging = true);
-
-    try {
-      final position = await _getCurrentLocation();
-
-      // Data dalam card menyesuaikan hasil pencarian
-      final cardData = _getHighlightValue();
-
-      final logResponse = await KendaraanService.logLokasi(
-        query: cardData,
-        resultsCount: 1,
-        source: widget.meta?.source ?? 'database',
-        responseTimeMs: widget.meta?.responseTimeMs ?? 0,
-        latitude: position?.latitude,
-        longitude: position?.longitude,
-      );
-
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SearchLogDetailPage(logData: logResponse),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-      }
-    } finally {
-      if (mounted) setState(() => _isLogging = false);
-    }
+  Future<Map<String, dynamic>> _createLocationLog(
+    Future<Position?> locationFuture,
+  ) async {
+    var position = await locationFuture;
+    position ??= await _LocationCache.get(requestPermission: true);
+    return KendaraanService.logLokasi(
+      query: _getHighlightValue(),
+      resultsCount: 1,
+      source: widget.meta?.source ?? 'database',
+      responseTimeMs: widget.meta?.responseTimeMs ?? 0,
+      latitude: position?.latitude,
+      longitude: position?.longitude,
+    );
   }
 
   String _getHighlightValue() {
@@ -86,17 +62,6 @@ class _ResultCardState extends State<ResultCard> {
       return widget.kendaraan.noRangka!;
     }
     return widget.kendaraan.noPolisi;
-  }
-
-  String get _resultLabel {
-    switch (widget.meta?.field) {
-      case 'no_mesin':
-        return 'Nosin';
-      case 'no_rangka':
-        return 'Noka';
-      default:
-        return 'Nopol';
-    }
   }
 
   String? get _resultValue {
@@ -114,119 +79,42 @@ class _ResultCardState extends State<ResultCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      margin: EdgeInsets.only(bottom: widget.compact ? 6 : 10),
-      padding: EdgeInsets.all(widget.compact ? 8 : 12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: EdgeInsets.only(bottom: widget.compact ? 6 : 10),
+      child: Material(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(5),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4F46E5).withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ClipRect(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _InlineField(
-                  label: _resultLabel,
-                  value: _resultValue,
-                  query: widget.meta?.query,
-                  emphasized: true,
+        child: InkWell(
+          onTap: _handleViewDetail,
+          borderRadius: BorderRadius.circular(5),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? 12 : 16,
+              vertical: widget.compact ? 10 : 13,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: RichText(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                text: TextSpan(
+                  children: _highlightedText(
+                    context,
+                    _resultValue?.trim().isNotEmpty == true
+                        ? _resultValue!.trim()
+                        : '-',
+                    widget.meta?.query.trim() ?? '',
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 9),
-          SizedBox(
-            height: widget.compact ? 28 : 30,
-            child: FilledButton.tonalIcon(
-              onPressed: _isLogging ? null : _handleViewDetail,
-              icon: _isLogging
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.visibility_outlined, size: 18),
-              label: Text(_isLogging ? 'Memuat' : 'Lihat detail'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InlineField extends StatelessWidget {
-  final String label;
-  final String? value;
-  final String? query;
-  final bool emphasized;
-
-  const _InlineField({
-    required this.label,
-    required this.value,
-    this.query,
-    this.emphasized = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final displayValue = value?.trim().isNotEmpty == true ? value!.trim() : '-';
-
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 11),
-      decoration: BoxDecoration(
-        color: emphasized
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.7)
-            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label  ',
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          RichText(
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            text: TextSpan(
-              children: _highlightedText(
-                context,
-                displayValue,
-                query?.trim() ?? '',
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -238,11 +126,11 @@ class _InlineField extends StatelessWidget {
   ) {
     final theme = Theme.of(context);
     final baseStyle = TextStyle(
-      color: emphasized
-          ? theme.colorScheme.primary
-          : theme.colorScheme.onSurface,
-      fontSize: 13,
+      color: theme.colorScheme.primary,
+      fontSize: 20,
       fontWeight: FontWeight.w800,
+      decoration: TextDecoration.underline,
+      decorationColor: theme.colorScheme.primary.withValues(alpha: 0.45),
     );
 
     if (searchQuery.isEmpty) {
@@ -282,5 +170,78 @@ class _InlineField extends StatelessWidget {
     }
 
     return spans;
+  }
+}
+
+class _LocationCache {
+  static const _lifetime = Duration(minutes: 5);
+  static Position? _position;
+  static DateTime? _cachedAt;
+  static Future<Position?>? _pending;
+
+  static Position? get cachedPosition {
+    final cachedAt = _cachedAt;
+    if (_position == null ||
+        cachedAt == null ||
+        DateTime.now().difference(cachedAt) >= _lifetime) {
+      return null;
+    }
+    return _position;
+  }
+
+  static Future<Position?> get({required bool requestPermission}) async {
+    final cached = cachedPosition;
+    if (cached != null) return cached;
+
+    final pending = _pending;
+    if (pending != null) {
+      final result = await pending;
+      if (result != null || !requestPermission) return result;
+    }
+
+    final future = _load(requestPermission: requestPermission);
+    _pending = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_pending, future)) _pending = null;
+    }
+  }
+
+  static Future<Position?> _load({required bool requestPermission}) async {
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied && requestPermission) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    final lastKnown = await Geolocator.getLastKnownPosition();
+    if (lastKnown != null) {
+      _store(lastKnown);
+      return lastKnown;
+    }
+
+    try {
+      final current = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 3),
+        ),
+      );
+      _store(current);
+      return current;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void _store(Position position) {
+    _position = position;
+    _cachedAt = DateTime.now();
   }
 }

@@ -6,6 +6,9 @@ class Kendaraan {
   final String? namaStnk;
   final String? leasing;
   final String? cabang;
+  final String? tahun;
+  final String? noHp;
+  final String? warna;
 
   Kendaraan({
     required this.noPolisi,
@@ -15,6 +18,9 @@ class Kendaraan {
     this.namaStnk,
     this.leasing,
     this.cabang,
+    this.tahun,
+    this.noHp,
+    this.warna,
   });
 
   factory Kendaraan.fromJson(Map<String, dynamic> json) {
@@ -26,7 +32,49 @@ class Kendaraan {
       namaStnk: json['nama_stnk'],
       leasing: json['nama_leasing'] ?? json['leasing'],
       cabang: json['nama_cabang'] ?? json['cabang'],
+      tahun: _firstValue(json, const [
+        'tahun',
+        'tahun_kendaraan',
+        'tahun_motor',
+        'year',
+      ]),
+      noHp: _firstValue(json, const [
+        'no_hp',
+        'nomor_hp',
+        'phone',
+        'no_handphone',
+        'contact_person',
+      ]),
+      warna: _firstValue(json, const [
+        'warna',
+        'warna_kendaraan',
+        'warna_motor',
+        'color',
+      ]),
     );
+  }
+
+  Map<String, dynamic> toDetailJson() {
+    return {
+      'no_polisi': noPolisi,
+      'no_mesin': noMesin,
+      'no_rangka': noRangka,
+      'type_motor': typeMotor,
+      'nama_stnk': namaStnk,
+      'nama_leasing': leasing,
+      'nama_cabang': cabang,
+      'tahun': tahun,
+      'no_hp': noHp,
+      'warna': warna,
+    };
+  }
+
+  static String? _firstValue(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
   }
 }
 

@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../core/api_config.dart';
 import '../models/kendaraan.dart';
@@ -8,25 +7,41 @@ import '../storage/token_storage.dart';
 
 class KendaraanService {
   static String get _base => ApiConfig.baseUrl;
+  static const _requestTimeout = Duration(seconds: 15);
+  static const _searchCacheLifetime = Duration(seconds: 30);
+  static const _detailCacheLifetime = Duration(minutes: 2);
+
+  static final http.Client _client = http.Client();
+  static final Map<String, _CacheEntry<Map<String, dynamic>>> _searchCache = {};
+  static final Map<int, _CacheEntry<Map<String, dynamic>>> _detailCache = {};
 
   /// GET /v1/cari/kendaraan?q=...&field=...&limit=...
   static Future<Map<String, dynamic>> search(
     String query, {
     String field = 'no_polisi',
-    int limit = 50,
+    int limit = 20,
   }) async {
+    final normalizedQuery = query.trim().toUpperCase();
+    final cacheKey = '$field|$normalizedQuery|$limit';
+    final cached = _searchCache[cacheKey];
+    if (cached != null && cached.isFresh(_searchCacheLifetime)) {
+      return cached.value;
+    }
+
     final token = await TokenStorage.getToken();
-    final url = Uri.parse(
-      '$_base/cari/kendaraan?q=$query&field=$field&limit=$limit',
+    final url = Uri.parse('$_base/cari/kendaraan').replace(
+      queryParameters: {
+        'q': normalizedQuery,
+        'field': field,
+        'limit': limit.toString(),
+      },
     );
     final headers = ApiConfig.authHeaders(token);
 
-    print(url);
-    print(headers);
-
     try {
-      final response = await http.get(url, headers: headers);
-      print(response.body);
+      final response = await _client
+          .get(url, headers: headers)
+          .timeout(_requestTimeout);
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
@@ -34,10 +49,13 @@ class KendaraanService {
           final List<dynamic> results = data['data'] ?? [];
           final Map<String, dynamic> metaJson = data['meta'] ?? {};
 
-          return {
+          final parsed = <String, dynamic>{
             'data': results.map((j) => Kendaraan.fromJson(j)).toList(),
             'meta': SearchMeta.fromJson(metaJson),
           };
+          _searchCache[cacheKey] = _CacheEntry(parsed);
+          _removeExpiredSearchCache();
+          return parsed;
         } else {
           throw Exception(
             data['error'] ?? data['message'] ?? 'Terjadi kesalahan',
@@ -50,9 +68,19 @@ class KendaraanService {
               'Terjadi kesalahan pada server (${response.statusCode})',
         );
       }
-    } catch (e) {
-      rethrow;
+    } on TimeoutException {
+      throw Exception('Pencarian terlalu lama. Silakan coba lagi.');
+    } on http.ClientException {
+      throw Exception('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
     }
+  }
+
+  static void cancelSearch() {}
+
+  static void _removeExpiredSearchCache() {
+    _searchCache.removeWhere(
+      (_, entry) => !entry.isFresh(_searchCacheLifetime),
+    );
   }
 
   /// POST /v1/log-lokasi
@@ -79,7 +107,9 @@ class KendaraanService {
     });
 
     try {
-      final response = await http.post(url, headers: headers, body: body);
+      final response = await _client
+          .post(url, headers: headers, body: body)
+          .timeout(_requestTimeout);
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -89,8 +119,8 @@ class KendaraanService {
           data['message'] ?? 'Gagal mengirim log (${response.statusCode})',
         );
       }
-    } catch (e) {
-      rethrow;
+    } on TimeoutException {
+      throw Exception('Permintaan detail terlalu lama. Silakan coba lagi.');
     }
   }
 
@@ -101,7 +131,7 @@ class KendaraanService {
     final headers = ApiConfig.authHeaders(token);
 
     try {
-      final response = await http.get(url, headers: headers);
+      final response = await _client.get(url, headers: headers);
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
@@ -120,15 +150,23 @@ class KendaraanService {
 
   /// GET /v1/history-log/detail/{id}
   static Future<Map<String, dynamic>> getHistoryLogDetail(int id) async {
+    final cached = _detailCache[id];
+    if (cached != null && cached.isFresh(_detailCacheLifetime)) {
+      return cached.value;
+    }
+
     final token = await TokenStorage.getToken();
     final url = Uri.parse('$_base/history-log/detail/$id');
     final headers = ApiConfig.authHeaders(token);
 
     try {
-      final response = await http.get(url, headers: headers);
+      final response = await _client
+          .get(url, headers: headers)
+          .timeout(_requestTimeout);
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        _detailCache[id] = _CacheEntry(data);
         return data;
       } else {
         throw Exception(
@@ -136,8 +174,23 @@ class KendaraanService {
               'Gagal mengambil detail riwayat (${response.statusCode})',
         );
       }
-    } catch (e) {
-      rethrow;
+    } on TimeoutException {
+      throw Exception('Detail terlalu lama dimuat. Silakan coba lagi.');
     }
+  }
+}
+
+class SearchCancelledException implements Exception {
+  const SearchCancelledException();
+}
+
+class _CacheEntry<T> {
+  final T value;
+  final DateTime createdAt;
+
+  _CacheEntry(this.value) : createdAt = DateTime.now();
+
+  bool isFresh(Duration lifetime) {
+    return DateTime.now().difference(createdAt) < lifetime;
   }
 }

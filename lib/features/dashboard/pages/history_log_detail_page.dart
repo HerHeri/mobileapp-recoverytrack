@@ -87,7 +87,7 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
     String disclaimer,
   ) async {
     final message =
-        "Info Suntik Radar \n Nopol : $noPolisi \n Nama STNK : $namaStnk \n Nosin : $noMesin \n Noka : $noRangka \n Tipe : $tipe \n Leasing : $namaLeasing \n Cabang : $namaCabang \n Ovd : - \n Contact Person : - \n Keterangan : - \n PERHATIAN : Data yang ditampilkan bukan bukti sah identitas kendaraan tersebut menunggak angsuran, dan bukan alat untuk mengamankan kendaraan, untuk validasi wajib konfirmasi  ke perusahaan Pembiayaan terkait.\n =============== \n Telah diakses oleh $userName ($userPhone | $userMail) dari $userCompany pada tanggal $createdAt. Lokasi akses data https://www.google.com/maps?q=$latitude,$longitude.";
+        "Recovery Track \n Nopol : $noPolisi \n Nama STNK : $namaStnk \n Nosin : $noMesin \n Noka : $noRangka \n Tipe : $tipe \n Leasing : $namaLeasing \n Cabang : $namaCabang \n Ovd : - \n Contact Person : - \n Keterangan : - \n PERHATIAN : Data yang ditampilkan bukan bukti sah identitas kendaraan tersebut menunggak angsuran, dan bukan alat untuk mengamankan kendaraan, untuk validasi wajib konfirmasi  ke perusahaan Pembiayaan terkait.\n =============== \n Telah diakses oleh $userName ($userPhone | $userMail) dari $userCompany pada tanggal $createdAt. Lokasi akses data https://www.google.com/maps?q=$latitude,$longitude.";
     final whatsappUrl = Uri.parse(
       "whatsapp://send?text=${Uri.encodeComponent(message)}",
     );

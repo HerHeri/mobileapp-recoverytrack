@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/settings_service.dart';
 
 class SearchLogDetailPage extends StatefulWidget {
   final Map<String, dynamic> logData;
+  final Future<Map<String, dynamic>>? logFuture;
+  final Future<Position?>? locationFuture;
 
-  const SearchLogDetailPage({super.key, required this.logData});
+  const SearchLogDetailPage({
+    super.key,
+    required this.logData,
+    this.logFuture,
+    this.locationFuture,
+  });
 
   @override
   State<SearchLogDetailPage> createState() => _SearchLogDetailPageState();
@@ -15,6 +24,100 @@ class SearchLogDetailPage extends StatefulWidget {
 class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
   final TextEditingController _messageController = TextEditingController();
   bool _isLoading = false;
+  bool _isSharing = false;
+  late Map<String, dynamic> _logData;
+  String? _whatsAppShareTemplate;
+  Future<void>? _templateFuture;
+  Future<void>? _logResultFuture;
+  Future<void>? _locationResultFuture;
+  String? _templateError;
+  String? _locationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _logData = widget.logData;
+    _locationResultFuture = _loadLocationResult();
+    _logResultFuture = _loadLogResult();
+    _templateFuture = _loadWhatsAppShareTemplate();
+  }
+
+  Future<void> _loadLocationResult() async {
+    final future = widget.locationFuture;
+    if (future == null) return;
+
+    try {
+      final position = await future;
+      if (!mounted) return;
+      if (position == null) {
+        setState(() {
+          _locationError =
+              "Lokasi belum tersedia. Pastikan GPS dan izin lokasi aktif.";
+        });
+        return;
+      }
+
+      final currentData = Map<String, dynamic>.from(_logData['data'] ?? {});
+      setState(() {
+        _locationError = null;
+        _logData = {
+          ..._logData,
+          'data': {
+            ...currentData,
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'maps_url':
+                'https://www.google.com/maps?q=${position.latitude},${position.longitude}',
+          },
+        };
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _locationError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _loadWhatsAppShareTemplate() async {
+    try {
+      _whatsAppShareTemplate = await SettingsService.getWhatsAppShareTemplate();
+      _templateError = null;
+    } catch (e) {
+      _whatsAppShareTemplate = null;
+      _templateError = e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  Future<void> _loadLogResult() async {
+    final future = widget.logFuture;
+    if (future == null) return;
+
+    try {
+      final response = await future;
+      if (!mounted) return;
+      final currentData = Map<String, dynamic>.from(_logData['data'] ?? {});
+      final responseData = Map<String, dynamic>.from(response['data'] ?? {});
+      for (final key in const ['latitude', 'longitude', 'maps_url']) {
+        final value = responseData[key];
+        if (value == null || value.toString().trim().isEmpty) {
+          responseData.remove(key);
+        }
+      }
+      setState(() {
+        _logData = {
+          ...response,
+          'data': {...currentData, ...responseData},
+        };
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
 
   @override
   void dispose() {
@@ -38,58 +141,168 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
     }
   }
 
-  Future<void> _shareToWhatsApp(
-    String noPolisi,
-    String namaStnk,
-    String noMesin,
-    String noRangka,
-    String tipe,
-    String namaLeasing,
-    String namaCabang,
-    String createdAt,
-    String userName,
-    String userPhone,
-    String userMail,
-    String latitude,
-    String longitude,
-    String userCompany,
-    String disclaimer,
-  ) async {
-    final message =
-        "Info Suntik Radar \n Nopol : $noPolisi \n Nama STNK : $namaStnk \n Nosin : $noMesin \n Noka : $noRangka \n Tipe : $tipe \n Leasing : $namaLeasing \n Cabang : $namaCabang \n Ovd : - \n Contact Person : - \n Keterangan : - \n PERHATIAN : Data yang ditampilkan bukan bukti sah identitas kendaraan tersebut menunggak angsuran, dan bukan alat untuk mengamankan kendaraan, untuk validasi wajib konfirmasi  ke perusahaan Pembiayaan terkait.\n =============== \n Telah diakses oleh $userName ($userPhone | $userMail) dari $userCompany pada tanggal $createdAt. Lokasi akses data https://www.google.com/maps?q=$latitude,$longitude.";
-    final whatsappUrl = Uri.parse(
-      "whatsapp://send?text=${Uri.encodeComponent(message)}",
-    );
-    final webUrl = Uri.parse(
-      "https://wa.me/?text=${Uri.encodeComponent(message)}",
-    );
+  Future<void> _shareToWhatsApp(Map<dynamic, dynamic> data) async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
 
-    bool launched = false;
     try {
-      launched = await launchUrl(
-        whatsappUrl,
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {}
+      if (_whatsAppShareTemplate == null) {
+        await _templateFuture;
+      }
+      if (_whatsAppShareTemplate == null) {
+        _templateFuture = _loadWhatsAppShareTemplate();
+        await _templateFuture;
+      }
+      await _logResultFuture;
+      await _locationResultFuture;
 
-    if (!launched) {
+      final template = _whatsAppShareTemplate?.trim();
+      if (template == null || template.isEmpty) {
+        throw Exception(
+          _templateError ??
+              "Kolom whatsapp_share_template belum tersedia atau masih kosong",
+        );
+      }
+
+      final latestData = Map<dynamic, dynamic>.from(_logData['data'] ?? data);
+      final values = _whatsAppTemplateValues(latestData);
+      final message = _renderTemplate(template, values);
+      final whatsappUrl = Uri.parse(
+        "whatsapp://send?text=${Uri.encodeComponent(message)}",
+      );
+      final webUrl = Uri.parse(
+        "https://wa.me/?text=${Uri.encodeComponent(message)}",
+      );
+
+      var launched = false;
       try {
+        launched = await launchUrl(
+          whatsappUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (_) {}
+
+      if (!launched) {
         launched = await launchUrl(
           webUrl,
           mode: LaunchMode.externalApplication,
         );
-      } catch (_) {}
-    }
+      }
 
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tidak dapat membuka WhatsApp")),
-      );
+      if (!launched) {
+        throw Exception("Tidak dapat membuka WhatsApp");
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
     }
   }
 
+  String _renderTemplate(String template, Map<String, String> values) {
+    var message = template.replaceAll(r'\n', '\n');
+    for (final entry in values.entries) {
+      message = message
+          .replaceAll('{{${entry.key}}}', entry.value)
+          .replaceAll('{${entry.key}}', entry.value);
+    }
+    return message;
+  }
+
+  Map<String, String> _whatsAppTemplateValues(Map<dynamic, dynamic> data) {
+    final nopol = _valueFrom(data, const ['nopol', 'no_polisi']);
+    final nosin = _valueFrom(data, const ['nosin', 'no_mesin']);
+    final noka = _valueFrom(data, const ['noka', 'no_rangka']);
+    final tipe = _valueFrom(data, const ['tipe', 'type_motor']);
+    final leasing = _valueFrom(data, const ['nama_leasing', 'leasing']);
+    final cabang = _valueFrom(data, const ['nama_cabang', 'cabang']);
+    final ovd = _valueFrom(data, const ['ovd', 'overdue']);
+    final contactPerson = _valueFrom(data, const [
+      'contact_person',
+      'nama_contact_person',
+      'pic',
+      'no_hp',
+      'nomor_hp',
+      'phone',
+    ]);
+    final warna = _valueFrom(data, const [
+      'warna',
+      'warna_kendaraan',
+      'warna_motor',
+      'color',
+    ]);
+    final keterangan = _valueFrom(data, const [
+      'keterangan',
+      'description',
+      'notes',
+      'catatan',
+    ]);
+    final userName = _valueFrom(data, const ['user_name', 'name']);
+    final directUserContact = _valueFrom(data, const ['user_contact']);
+    final userPhone = _valueFrom(data, const ['user_phone', 'phone_user']);
+    final userEmail = _valueFrom(data, const ['user_email', 'email']);
+    final userContact = directUserContact != '-'
+        ? directUserContact
+        : [
+            if (userPhone != '-') userPhone,
+            if (userEmail != '-') userEmail,
+          ].join(' | ');
+    final accessDate = _valueFrom(data, const [
+      'access_date',
+      'created_at',
+      'accessed_at',
+      'tanggal_akses',
+    ]);
+    final latitude = _valueFrom(data, const ['latitude', 'lat']);
+    final longitude = _valueFrom(data, const ['longitude', 'lng', 'lon']);
+    final mapsUrl = _valueFrom(data, const ['maps_url', 'map_url']);
+    final generatedMapsUrl = latitude != '-' && longitude != '-'
+        ? 'https://www.google.com/maps?q=$latitude,$longitude'
+        : '-';
+
+    return {
+      'nopol': nopol,
+      'no_polisi': nopol,
+      'nosin': nosin,
+      'no_mesin': nosin,
+      'noka': noka,
+      'no_rangka': noka,
+      'nama_stnk': _valueFrom(data, const ['nama_stnk']),
+      'tipe': tipe,
+      'type_motor': tipe,
+      'leasing': leasing,
+      'nama_leasing': leasing,
+      'cabang': cabang,
+      'nama_cabang': cabang,
+      'ovd': ovd,
+      'contact_person': contactPerson,
+      'warna': warna,
+      'keterangan': keterangan,
+      'user_name': userName,
+      'user_contact': userContact.isEmpty ? '-' : userContact,
+      'user_phone': userPhone,
+      'user_email': userEmail,
+      'user_company': _valueFrom(data, const [
+        'user_company',
+        'company',
+        'nama_perusahaan',
+      ]),
+      'access_date': accessDate,
+      'created_at': accessDate,
+      'latitude': latitude,
+      'longitude': longitude,
+      'maps_url': mapsUrl == '-' ? generatedMapsUrl : mapsUrl,
+      'disclaimer': _valueFrom(data, const ['disclaimer']),
+    };
+  }
+
   Future<void> _sendNotification() async {
-    final data = widget.logData['data'] ?? {};
+    final data = _logData['data'] ?? {};
     final logId = data['log_id'];
     final message = _messageController.text.trim();
 
@@ -135,7 +348,14 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final data = widget.logData['data'] ?? {};
+    final data = _logData['data'] ?? {};
+    final phone = _valueFrom(data, const [
+      'no_hp',
+      'nomor_hp',
+      'phone',
+      'no_handphone',
+      'contact_person',
+    ]);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Pencarian")),
@@ -152,6 +372,31 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
                   _buildInfoRow("Tipe Motor", data['type_motor'] ?? "-"),
                   _buildInfoRow("No Mesin", data['no_mesin'] ?? "-"),
                   _buildInfoRow("No Rangka", data['no_rangka'] ?? "-"),
+                  _buildInfoRow(
+                    "Tahun",
+                    _valueFrom(data, const [
+                      'tahun',
+                      'tahun_kendaraan',
+                      'tahun_motor',
+                      'year',
+                    ]),
+                  ),
+                  _buildInfoRow(
+                    "Warna",
+                    _valueFrom(data, const [
+                      'warna',
+                      'warna_kendaraan',
+                      'warna_motor',
+                      'color',
+                    ]),
+                  ),
+                  _buildInfoRow(
+                    "No HP",
+                    phone,
+                    onTap: phone == "-"
+                        ? null
+                        : () => _openPhoneWhatsApp(phone),
+                  ),
                   _buildInfoRow(
                     "Finance",
                     _valueFrom(data, const ['nama_leasing', 'leasing']),
@@ -208,29 +453,36 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
                     data['longitude']?.toString() ?? "-",
                   ),
                 ]),
+                if (_locationError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _locationError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => _shareToWhatsApp(
-                      data['no_polisi'] ?? "-",
-                      data['nama_stnk'] ?? "-",
-                      data['no_mesin'] ?? "-",
-                      data['no_rangka'] ?? "-",
-                      data['type_motor'] ?? "-",
-                      data['nama_leasing'] ?? "-",
-                      data['nama_cabang'] ?? "-",
-                      data['created_at'] ?? "-",
-                      data['user_name'] ?? "-",
-                      data['user_phone'] ?? "-",
-                      data['user_email'] ?? "-",
-                      data['latitude']?.toString() ?? "-",
-                      data['longitude']?.toString() ?? "-",
-                      data['user_company'] ?? "-",
-                      data['disclaimer'] ?? "-",
+                    onPressed: _isSharing ? null : () => _shareToWhatsApp(data),
+                    icon: _isSharing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.message),
+                    label: Text(
+                      _isSharing
+                          ? "Membuka WhatsApp..."
+                          : "Bagikan via WhatsApp",
                     ),
-                    icon: const Icon(Icons.message),
-                    label: const Text("Bagikan via WhatsApp"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -329,7 +581,30 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Future<void> _openPhoneWhatsApp(String phone) async {
+    var normalized = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (normalized.startsWith('0')) {
+      normalized = '62${normalized.substring(1)}';
+    }
+    if (normalized.isEmpty) return;
+
+    final appUrl = Uri.parse('whatsapp://send?phone=$normalized');
+    final webUrl = Uri.parse('https://wa.me/$normalized');
+    var launched = false;
+    try {
+      launched = await launchUrl(appUrl, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!launched) {
+      launched = await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+    }
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tidak dapat membuka WhatsApp")),
+      );
+    }
+  }
+
+  Widget _buildInfoRow(String label, String value, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -345,10 +620,19 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+            child: InkWell(
+              onTap: onTap,
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: onTap == null
+                      ? null
+                      : Theme.of(context).colorScheme.primary,
+                  decoration: onTap == null ? null : TextDecoration.underline,
+                ),
+              ),
             ),
           ),
         ],
