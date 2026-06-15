@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/settings_service.dart';
+import '../widgets/disclaimer_card.dart';
 
 class SearchLogDetailPage extends StatefulWidget {
   final Map<String, dynamic> logData;
@@ -362,7 +363,7 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -407,22 +408,10 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
                   ),
                   _buildInfoRow("Ovd", data['ovd'] ?? "-"),
                   _buildInfoRow("No Kontrak", data['nomor_kontrak'] ?? "-"),
+                  const InformationStatusRow(),
                 ]),
                 const SizedBox(height: 20),
-                Card(
-                  color: Colors.yellow.shade50,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      data['disclaimer'] ?? "",
-                      style: TextStyle(
-                        color: const Color.fromARGB(206, 255, 0, 0),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+                const DisclaimerCard(),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -572,7 +561,7 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: children,

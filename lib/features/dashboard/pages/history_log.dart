@@ -41,7 +41,8 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
       final history = await KendaraanService.getHistoryLog();
       if (!mounted) return;
       setState(() {
-        _allHistory = history;
+        _allHistory = List<dynamic>.from(history)
+          ..sort(_compareHistoryNewestFirst);
         _applyFilter();
         _isLoading = false;
       });
@@ -54,6 +55,43 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
     }
   }
 
+  int _compareHistoryNewestFirst(dynamic first, dynamic second) {
+    final firstDate = _historyDate(first);
+    final secondDate = _historyDate(second);
+
+    if (firstDate != null && secondDate != null) {
+      final dateComparison = secondDate.compareTo(firstDate);
+      if (dateComparison != 0) return dateComparison;
+    } else if (firstDate != null) {
+      return -1;
+    } else if (secondDate != null) {
+      return 1;
+    }
+
+    final firstId = int.tryParse(first['id']?.toString() ?? '') ?? 0;
+    final secondId = int.tryParse(second['id']?.toString() ?? '') ?? 0;
+    return secondId.compareTo(firstId);
+  }
+
+  DateTime? _historyDate(dynamic item) {
+    final value = item['created_at']?.toString().trim();
+    if (value == null || value.isEmpty) return null;
+
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+
+    for (final format in const [
+      'yyyy-MM-dd HH:mm:ss',
+      'dd-MM-yyyy HH:mm:ss',
+      'dd/MM/yyyy HH:mm:ss',
+    ]) {
+      try {
+        return DateFormat(format).parseStrict(value);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   void _applyFilter() {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
@@ -61,7 +99,21 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
     } else {
       _filteredHistory = _allHistory.where((item) {
         final itemQuery = (item['query'] ?? '').toString().toLowerCase();
-        return itemQuery.contains(query);
+        final rawDate = (item['created_at'] ?? '').toString().toLowerCase();
+        final date = _historyDate(item);
+        final searchableDates = date == null
+            ? rawDate
+            : [
+                rawDate,
+                DateFormat('dd MMM yyyy, HH:mm').format(date),
+                DateFormat('dd MMM yyyy').format(date),
+                DateFormat('dd/MM/yyyy').format(date),
+                DateFormat('dd-MM-yyyy').format(date),
+                DateFormat('yyyy-MM-dd').format(date),
+                DateFormat('HH:mm').format(date),
+              ].join(' ').toLowerCase();
+
+        return itemQuery.contains(query) || searchableDates.contains(query);
       }).toList();
     }
   }
@@ -101,7 +153,7 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: "Cari nomor polisi...",
+                hintText: "Cari nomor polisi atau tanggal...",
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/kendaraan_service.dart';
 import '../../../services/notification_service.dart';
+import '../widgets/disclaimer_card.dart';
 
 class HistoryLogDetailPage extends StatefulWidget {
   final int logId;
@@ -189,20 +190,75 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
     }
 
     final data = _detailData ?? {};
+    final phone = _valueFrom(data, const [
+      'no_hp',
+      'nomor_hp',
+      'phone',
+      'telepon',
+      'hp',
+      'no_handphone',
+      'contact_person',
+    ]);
 
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSectionTitle("Informasi Kendaraan"),
               _buildInfoCard([
-                _buildInfoRow("Kata Kunci", data['query'] ?? "-"),
-                _buildInfoRow("No Polisi", data['no_polisi'] ?? "-"),
-                _buildInfoRow("No Mesin", data['no_mesin'] ?? "-"),
-                _buildInfoRow("No Rangka", data['no_rangka'] ?? "-"),
+                // _buildInfoRow(
+                //   "Kata Kunci",
+                //   _valueFrom(data, const ['query', 'keyword', 'kata_kunci']),
+                // ),
+                _buildInfoRow(
+                  "No Polisi",
+                  _valueFrom(data, const ['no_polisi', 'nopol']),
+                ),
+                _buildInfoRow(
+                  "Tipe Motor",
+                  _valueFrom(data, const [
+                    'type_motor',
+                    'tipe_motor',
+                    'tipe',
+                    'type',
+                  ]),
+                ),
+                _buildInfoRow(
+                  "No Mesin",
+                  _valueFrom(data, const ['no_mesin', 'nosin']),
+                ),
+                _buildInfoRow(
+                  "No Rangka",
+                  _valueFrom(data, const ['no_rangka', 'noka']),
+                ),
+                _buildInfoRow(
+                  "Tahun",
+                  _valueFrom(data, const [
+                    'tahun',
+                    'tahun_kendaraan',
+                    'tahun_motor',
+                    'tahun_pembuatan',
+                    'year',
+                  ]),
+                ),
+                _buildInfoRow(
+                  "Warna",
+                  _valueFrom(data, const [
+                    'warna',
+                    'warna_kendaraan',
+                    'warna_motor',
+                    'warna_unit',
+                    'color',
+                  ]),
+                ),
+                _buildInfoRow(
+                  "No HP",
+                  phone,
+                  onTap: phone == "-" ? null : () => _openPhoneWhatsApp(phone),
+                ),
                 _buildInfoRow(
                   "Finance",
                   _valueFrom(data, const ['nama_leasing', 'leasing']),
@@ -211,24 +267,24 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
                   "Cabang",
                   _valueFrom(data, const ['nama_cabang', 'cabang']),
                 ),
-                _buildInfoRow("Waktu", data['created_at'] ?? "-"),
-              ]),
-              const SizedBox(height: 20),
-              Card(
-                color: Colors.yellow.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    data['disclaimer'] ?? "",
-                    style: TextStyle(
-                      color: const Color.fromARGB(206, 255, 0, 0),
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                _buildInfoRow(
+                  "Ovd",
+                  _valueFrom(data, const ['ovd', 'overdue']),
                 ),
-              ),
-              const SizedBox(height: 20),
+                _buildInfoRow(
+                  "No Kontrak",
+                  _valueFrom(data, const [
+                    'nomor_kontrak',
+                    'no_kontrak',
+                    'contract_no',
+                    'contract_number',
+                  ]),
+                ),
+                const InformationStatusRow(),
+              ]),
+              const SizedBox(height: 16),
+              const DisclaimerCard(),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -255,7 +311,7 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
                   data['longitude']?.toString() ?? "-",
                 ),
               ]),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -289,7 +345,7 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 16),
               _buildSectionTitle("Wajib Mengisi Alasan"),
               _buildInfoCard([
                 const SizedBox(height: 12),
@@ -339,7 +395,7 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      padding: const EdgeInsets.only(bottom: 4, left: 4),
       child: Text(
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -365,7 +421,7 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: children,
@@ -374,7 +430,30 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Future<void> _openPhoneWhatsApp(String phone) async {
+    var normalized = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (normalized.startsWith('0')) {
+      normalized = '62${normalized.substring(1)}';
+    }
+    if (normalized.isEmpty) return;
+
+    final appUrl = Uri.parse('whatsapp://send?phone=$normalized');
+    final webUrl = Uri.parse('https://wa.me/$normalized');
+    var launched = false;
+    try {
+      launched = await launchUrl(appUrl, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!launched) {
+      launched = await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+    }
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tidak dapat membuka WhatsApp")),
+      );
+    }
+  }
+
+  Widget _buildInfoRow(String label, String value, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -390,10 +469,19 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+            child: InkWell(
+              onTap: onTap,
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: onTap == null
+                      ? null
+                      : Theme.of(context).colorScheme.primary,
+                  decoration: onTap == null ? null : TextDecoration.underline,
+                ),
+              ),
             ),
           ),
         ],

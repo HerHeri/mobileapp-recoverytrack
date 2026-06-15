@@ -152,7 +152,7 @@ class KendaraanService {
   static Future<Map<String, dynamic>> getHistoryLogDetail(int id) async {
     final cached = _detailCache[id];
     if (cached != null && cached.isFresh(_detailCacheLifetime)) {
-      return cached.value;
+      return _normalizeHistoryDetail(cached.value);
     }
 
     final token = await TokenStorage.getToken();
@@ -166,8 +166,9 @@ class KendaraanService {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        _detailCache[id] = _CacheEntry(data);
-        return data;
+        final detail = _normalizeHistoryDetail(data);
+        _detailCache[id] = _CacheEntry(detail);
+        return detail;
       } else {
         throw Exception(
           data['message'] ??
@@ -177,6 +178,45 @@ class KendaraanService {
     } on TimeoutException {
       throw Exception('Detail terlalu lama dimuat. Silakan coba lagi.');
     }
+  }
+
+  static Map<String, dynamic> _normalizeHistoryDetail(
+    Map<String, dynamic> response,
+  ) {
+    final normalized = <String, dynamic>{};
+    const nestedKeys = [
+      'data',
+      'detail',
+      'history',
+      'log',
+      'result',
+      'search_result',
+      'response_data',
+      'vehicle_data',
+      'hasil',
+      'kendaraan',
+      'vehicle',
+    ];
+
+    void merge(Map<dynamic, dynamic> source) {
+      for (final entry in source.entries) {
+        if (entry.value is! Map && entry.value is! List) {
+          normalized[entry.key.toString()] = entry.value;
+        }
+      }
+
+      for (final key in nestedKeys) {
+        final value = source[key];
+        if (value is Map) {
+          merge(value);
+        } else if (value is List && value.isNotEmpty && value.first is Map) {
+          merge(value.first as Map);
+        }
+      }
+    }
+
+    merge(response);
+    return normalized;
   }
 }
 

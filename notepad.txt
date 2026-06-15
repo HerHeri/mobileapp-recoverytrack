@@ -1,14 +1,6 @@
-next update 1.0.9+9
+next update 1.0.10+10
 
-1. Hilangin muter loading dan card mulai mengetik
-2. Hilangkan lihat detail dan simbol mata tulisan nopol pada layar pengetikan di pencarian
-3. Percepat proses pencarian dan ketika klik detail kendaraan 
-4. Pada detail kendaraan tambahkan
-    a. Tahun,
-    b. No Hp,
-    c. Warna
-5. Template detail kendaraan ada perubahan
-    a. kode leasing dan kode cabang di hilangkan
-    b. tambahkan kolom warna,
-    c. tambahkan kolom tahun,
-    d. tambahkan kolom no hp
+1. Update pencarian jadi descending dan bisa melakukan pencarian berdasarkan bulan dan tanggal akses,
+2. Perbaikan tampilan detail kendaraan di riwayat pencarian,
+3. Tambahkan text "Untuk validasi wajib konfirmasi ke perusahaan Pembiayaan Terkait",
+4. Tambahkan Status Informasi dengan keterangan "Perlu Validasi"
