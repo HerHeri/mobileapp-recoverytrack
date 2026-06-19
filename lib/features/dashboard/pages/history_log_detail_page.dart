@@ -7,8 +7,13 @@ import '../widgets/disclaimer_card.dart';
 
 class HistoryLogDetailPage extends StatefulWidget {
   final int logId;
+  final Map<String, dynamic>? initialData;
 
-  const HistoryLogDetailPage({super.key, required this.logId});
+  const HistoryLogDetailPage({
+    super.key,
+    required this.logId,
+    this.initialData,
+  });
 
   @override
   State<HistoryLogDetailPage> createState() => _HistoryLogDetailPageState();
@@ -25,7 +30,14 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
   @override
   void initState() {
     super.initState();
-    _fetchDetail();
+    final initialData = widget.initialData;
+    if (initialData == null) {
+      _fetchDetail();
+    } else {
+      _detailData = KendaraanService.normalizeHistoryDetail(initialData);
+      _isLoading = false;
+      _fetchDetail(showLoading: false);
+    }
   }
 
   @override
@@ -34,19 +46,30 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
     super.dispose();
   }
 
-  Future<void> _fetchDetail() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _fetchDetail({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final data = await KendaraanService.getHistoryLogDetail(widget.logId);
+      if (!mounted) return;
       setState(() {
         _detailData = data;
         _isLoading = false;
+        _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
+      if (_detailData != null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
       setState(() {
         _error = e.toString();
         _isLoading = false;

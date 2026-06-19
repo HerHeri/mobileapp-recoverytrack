@@ -159,7 +159,7 @@ class InformationStatusRow extends StatelessWidget {
                 ),
                 SizedBox(width: 6),
                 Text(
-                  'Perlu Validasi',
+                  'Wajib Validasi',
                   style: TextStyle(
                     color: Color.fromARGB(255, 0, 0, 0),
                     fontSize: 13,

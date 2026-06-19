@@ -253,12 +253,17 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
             subtitle: Text(formattedDate),
             trailing: const Icon(Icons.chevron_right, size: 16),
             onTap: () {
-              final id = item['id'];
+              final id = int.tryParse(item['id']?.toString() ?? '');
               if (id != null) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => HistoryLogDetailPage(logId: id),
+                    builder: (_) => HistoryLogDetailPage(
+                      logId: id,
+                      initialData: item is Map
+                          ? Map<String, dynamic>.from(item)
+                          : null,
+                    ),
                   ),
                 );
               }

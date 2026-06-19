@@ -1,6 +1,11 @@
-next update 1.0.10+10
+last update 1.0.10+10
 
 1. Update pencarian jadi descending dan bisa melakukan pencarian berdasarkan bulan dan tanggal akses,
 2. Perbaikan tampilan detail kendaraan di riwayat pencarian,
 3. Tambahkan text "Untuk validasi wajib konfirmasi ke perusahaan Pembiayaan Terkait",
 4. Tambahkan Status Informasi dengan keterangan "Perlu Validasi"
+
+next update 1.0.11+11
+
+1. Perbaikan isi cabang di detail kendaraan
+2. Tulisan Perlu Validasi di ganti dengan Wajib Validasi

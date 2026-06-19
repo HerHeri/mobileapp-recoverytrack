@@ -152,7 +152,7 @@ class KendaraanService {
   static Future<Map<String, dynamic>> getHistoryLogDetail(int id) async {
     final cached = _detailCache[id];
     if (cached != null && cached.isFresh(_detailCacheLifetime)) {
-      return _normalizeHistoryDetail(cached.value);
+      return normalizeHistoryDetail(cached.value);
     }
 
     final token = await TokenStorage.getToken();
@@ -166,7 +166,7 @@ class KendaraanService {
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final detail = _normalizeHistoryDetail(data);
+        final detail = normalizeHistoryDetail(data);
         _detailCache[id] = _CacheEntry(detail);
         return detail;
       } else {
@@ -180,8 +180,8 @@ class KendaraanService {
     }
   }
 
-  static Map<String, dynamic> _normalizeHistoryDetail(
-    Map<String, dynamic> response,
+  static Map<String, dynamic> normalizeHistoryDetail(
+    Map<dynamic, dynamic> response,
   ) {
     final normalized = <String, dynamic>{};
     const nestedKeys = [
