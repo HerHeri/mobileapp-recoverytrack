@@ -402,7 +402,7 @@ class _DashboardPageState extends State<DashboardPage>
                   },
                   readOnly: isCustomKeyboard && _keyboardVisible,
                   focusNode: _focusNode,
-                  textSize: _textSize,
+                  textSize: (_textSize * 0.65).clamp(18.0, 32.0),
                 ),
 
                 // --- Keyboard toggle (only when custom) ---
@@ -440,7 +440,7 @@ class _DashboardPageState extends State<DashboardPage>
                         child: CustomKeyboard(
                           layoutType: _keyboardType,
                           height: finalKeyboardHeight,
-                          textSize: _textSize,
+                          textSize: (_textSize * 0.65).clamp(18.0, 32.0),
                           vibrationEnabled: _vibrationEnabled,
                           keyboardBackground:
                               theme.colorScheme.surfaceContainerLow,

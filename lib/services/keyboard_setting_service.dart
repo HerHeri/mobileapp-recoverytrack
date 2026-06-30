@@ -10,7 +10,7 @@ class KeyboardSettingService {
   // 0 = system, 1-5 = custom layouts
   static const int defaultType = 0;
   static const double defaultHeight = 280;
-  static const double defaultTextSize = 20;
+  static const double defaultTextSize = 32;
   static const bool defaultVibration = true;
   static const bool defaultKeepScreenOn = false;
 

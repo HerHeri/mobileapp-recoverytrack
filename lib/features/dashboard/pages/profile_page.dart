@@ -26,7 +26,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final _passwordController = TextEditingController();
 
-  XFile? _selectedImage;
+  XFile? _photo;
+  XFile? _ktpPhoto;
+  XFile? _selfieKtpPhoto;
+  XFile? _suratTugasPhoto;
   final ImagePicker _picker = ImagePicker();
 
   Map<String, dynamic>? _profileData;
@@ -43,24 +46,33 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchProfile();
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 70,
-      );
-      if (image != null) {
-        setState(() {
-          _selectedImage = image;
-        });
+  Future<void> _pickImage(String type) async {
+    final image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (image == null) return;
+    if (!mounted) return;
+    setState(() {
+      switch (type) {
+        case 'photo':
+          _photo = image;
+          break;
+
+        case 'ktp':
+          _ktpPhoto = image;
+          break;
+
+        case 'selfie':
+          _selfieKtpPhoto = image;
+          break;
+
+        case 'surat':
+          _suratTugasPhoto = image;
+          break;
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal mengambil foto: $e")));
-      }
-    }
+    });
   }
 
   @override
@@ -101,7 +113,10 @@ class _ProfilePageState extends State<ProfilePage> {
         _emailController.text = (data['email'] ?? "").toString();
         _phoneController.text = (data['phone'] ?? "").toString();
         _nikController.text = (data['nik'] ?? "").toString();
-        _selectedImage = null;
+        _photo = null;
+        _ktpPhoto = null;
+        _selfieKtpPhoto = null;
+        _suratTugasPhoto = null;
         _isLoading = false;
       });
     } catch (e) {
@@ -122,7 +137,6 @@ class _ProfilePageState extends State<ProfilePage> {
       "name": _nameController.text,
       "email": _emailController.text,
       "phone": _phoneController.text,
-      "nik": _nikController.text,
       if (_passwordController.text.isNotEmpty) ...{
         "old_password": _oldPasswordController.text,
         "password": _passwordController.text,
@@ -130,16 +144,26 @@ class _ProfilePageState extends State<ProfilePage> {
     };
 
     try {
-      Uint8List? photoBytes;
-      String? photoName;
-      if (_selectedImage != null) {
-        photoBytes = await _selectedImage!.readAsBytes();
-        photoName = _selectedImage!.name;
-      }
       final response = await AuthService.updateProfile(
         body,
-        photoBytes: photoBytes,
-        photoFileName: photoName,
+
+        photoBytes: _photo == null ? null : await _photo!.readAsBytes(),
+        photoFileName: _photo?.name,
+
+        ktpPhotoBytes: _ktpPhoto == null
+            ? null
+            : await _ktpPhoto!.readAsBytes(),
+        ktpPhotoFileName: _ktpPhoto?.name,
+
+        selfieKtpPhotoBytes: _selfieKtpPhoto == null
+            ? null
+            : await _selfieKtpPhoto!.readAsBytes(),
+        selfieKtpPhotoFileName: _selfieKtpPhoto?.name,
+
+        suratTugasPhotoBytes: _suratTugasPhoto == null
+            ? null
+            : await _suratTugasPhoto!.readAsBytes(),
+        suratTugasPhotoFileName: _suratTugasPhoto?.name,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +172,7 @@ class _ProfilePageState extends State<ProfilePage> {
             backgroundColor: Colors.green,
           ),
         );
+        await _fetchProfile();
         _oldPasswordController.clear();
         _passwordController.clear();
 
@@ -161,7 +186,10 @@ class _ProfilePageState extends State<ProfilePage> {
             _emailController.text = response['user']['email'] ?? "";
             _phoneController.text = response['user']['phone'] ?? "";
             _nikController.text = response['user']['nik'] ?? "";
-            _selectedImage = null;
+            _photo = null;
+            _ktpPhoto = null;
+            _selfieKtpPhoto = null;
+            _suratTugasPhoto = null;
           });
         } else {
           _fetchProfile();
@@ -175,6 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
             backgroundColor: Colors.red,
           ),
         );
+        await _fetchProfile();
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -260,10 +289,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     // Status paket
-    final approvalStatus = data['approval_status']?.toString() ?? '-';
     final paketStatus = data['paket_status']?.toString() ?? '-';
-    final isFree = data['free_status'] != null;
-    final freeStatus = data['free_status']?.toString() ?? '-';
 
     final photoUrl = data['photo']?.toString();
     final hasNetworkPhoto = photoUrl != null && photoUrl.isNotEmpty;
@@ -295,20 +321,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: () => _pickImage('photo'),
                       child: Stack(
                         children: [
                           CircleAvatar(
                             radius: 30,
                             backgroundColor: Colors.white24,
-                            backgroundImage: _selectedImage != null
+                            backgroundImage: _photo != null
                                 ? (kIsWeb
-                                      ? NetworkImage(_selectedImage!.path)
-                                      : FileImage(File(_selectedImage!.path)))
+                                      ? NetworkImage(_photo!.path)
+                                      : FileImage(File(_photo!.path)))
                                 : hasNetworkPhoto
                                 ? NetworkImage(photoUrl)
                                 : null,
-                            child: (_selectedImage == null && !hasNetworkPhoto)
+                            child: (_photo == null && !hasNetworkPhoto)
                                 ? const Icon(
                                     Icons.person,
                                     size: 40,
@@ -482,6 +508,28 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle("Dokumen"),
+                      _buildDocumentPicker(
+                        title: "Foto KTP",
+                        networkImage: data['ktp_photo'],
+                        localImage: _ktpPhoto,
+                        onTap: () => _pickImage('ktp'),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDocumentPicker(
+                        title: "Selfie Dengan KTP",
+                        networkImage: data['selfie_ktp_photo'],
+                        localImage: _selfieKtpPhoto,
+                        onTap: () => _pickImage('selfie'),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDocumentPicker(
+                        title: "Surat Tugas",
+                        networkImage: data['surat_tugas_photo'],
+                        localImage: _suratTugasPhoto,
+                        onTap: () => _pickImage('surat'),
+                      ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -557,6 +605,70 @@ class _ProfilePageState extends State<ProfilePage> {
           const Spacer(),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentPicker({
+    required String title,
+    required String? networkImage,
+    required XFile? localImage,
+    required VoidCallback onTap,
+  }) {
+    Widget imageWidget;
+
+    if (localImage != null) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          File(localImage.path),
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (networkImage != null && networkImage.isNotEmpty) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          networkImage,
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      imageWidget = Container(
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Center(child: Icon(Icons.image, size: 60)),
+      );
+    }
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            imageWidget,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text("Pilih Foto"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

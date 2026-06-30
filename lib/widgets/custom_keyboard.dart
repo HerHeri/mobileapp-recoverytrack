@@ -51,8 +51,8 @@ class CustomKeyboard extends StatelessWidget {
   Color get _keyBorder => keyBorder ?? const Color(0xFF58B2D2);
   Color get _textColor => keyForeground ?? const Color(0xFF06384D);
 
-  static const double _gap = 1.0;
-  static const double _radius = 8.0;
+  static const double _gap = 0.4;
+  static const double _radius = 6.0;
 
   void _vibrate() {
     if (vibrationEnabled) {
@@ -61,68 +61,97 @@ class CustomKeyboard extends StatelessWidget {
   }
 
   double _safeFontSize(double keyHeight) {
-    // Keep font inside the key even when user sets textSize too large.
-    final requested = textSize.clamp(18.0, 46.0);
-    return math.min(requested, keyHeight * 0.58).clamp(16.0, 46.0);
+    return math.min(textSize.clamp(18.0, 40.0), keyHeight * 0.75);
   }
 
   double _safeIconSize(double keyHeight) {
-    return math.min(_safeFontSize(keyHeight) + 8, keyHeight * 0.66);
+    return math.min(keyHeight * 0.42, 28.0);
   }
 
   double _keyHeight(double maxHeight, int rowCount) {
-    // The old code used a fixed clamp, so several layouts overflowed when the
-    // number of visible rows was more than the value used in _keyHeight().
-    // This version calculates from the real row count.
-    final safeMaxHeight = math.max(80.0, maxHeight);
-    final totalGap = (rowCount - 1) * _gap;
-    final available = safeMaxHeight - totalGap;
-    return math.max(18.0, available / rowCount);
+    final available = maxHeight - ((rowCount - 1) * _gap);
+    return available / rowCount;
   }
 
-  Widget _charKey(String char, double keyH, {int flex = 1}) {
+  Widget _indentRow(
+    List<Widget> children, {
+    double left = 0,
+    double right = 0,
+  }) {
+    return Row(
+      children: [
+        SizedBox(width: left),
+        Expanded(child: Row(children: children)),
+        SizedBox(width: right),
+      ],
+    );
+  }
+
+  // Widget _charKey(String char, double keyH, {int flex = 1}) {
+  //   return Expanded(
+  //     flex: flex,
+  //     child: Container(
+  //       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 0.3),
+  //       decoration: BoxDecoration(
+  //         color: _keyBg,
+  //         borderRadius: BorderRadius.circular(math.min(_radius, keyH * 0.22)),
+  //         border: Border.all(color: _keyBorder, width: .3),
+  //       ),
+  //       child: Material(
+  //         color: Colors.transparent,
+  //         child: InkWell(
+  //           borderRadius: BorderRadius.circular(math.min(12, keyH * 0.22)),
+  //           onTap: () {
+  //             _vibrate();
+  //             callbacks.onChar(char);
+  //           },
+  //           child: FittedBox(
+  //             fit: BoxFit.scaleDown,
+  //             child: Text(
+  //               char,
+  //               maxLines: 1,
+  //               style: TextStyle(
+  //                 fontWeight: FontWeight.w700,
+  //                 fontSize: _safeFontSize(keyH),
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+  Widget _charKey(String char, double keyH, {int flex = 1, double? height}) {
     return Expanded(
       flex: flex,
-      child: SizedBox(
-        height: keyH,
-        child: Padding(
-          padding: const EdgeInsets.all(0.7),
-          child: DecoratedBox(
+      child: Align(
+        alignment: Alignment.center,
+        child: SizedBox(
+          height: height ?? keyH,
+          child: Container(
+            height: height ?? keyH,
+            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 0.3),
             decoration: BoxDecoration(
               color: _keyBg,
-              borderRadius: BorderRadius.circular(_radius),
-              border: Border.all(color: _keyBorder, width: 0.7),
+              borderRadius: BorderRadius.circular(
+                math.min(_radius, keyH * 0.22),
+              ),
+              border: Border.all(color: _keyBorder, width: .3),
             ),
             child: Material(
               color: Colors.transparent,
-              borderRadius: BorderRadius.circular(_radius),
               child: InkWell(
-                borderRadius: BorderRadius.circular(_radius),
+                borderRadius: BorderRadius.circular(math.min(12, keyH * 0.22)),
                 onTap: () {
                   _vibrate();
                   callbacks.onChar(char);
                 },
                 child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      char,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: _safeFontSize(keyH),
-                        fontWeight: FontWeight.w900,
-                        color: _textColor,
-                        height: 1.0,
-                        letterSpacing: 0.3,
-                        shadows: const [
-                          Shadow(
-                            color: Color(0x55000000),
-                            offset: Offset(0.8, 1.0),
-                            blurRadius: 1.2,
-                          ),
-                        ],
-                      ),
+                  child: Text(
+                    char,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: _safeFontSize(keyH),
                     ),
                   ),
                 ),
@@ -143,38 +172,29 @@ class CustomKeyboard extends StatelessWidget {
     return Expanded(
       flex: flex,
       child: SizedBox(
-        height: keyH,
         child: Padding(
-          padding: const EdgeInsets.all(0.7),
+          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 0.3),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: _keyBgAlt,
-              borderRadius: BorderRadius.circular(_radius + 6),
-              border: Border.all(color: _keyBorder, width: 0.8),
+              borderRadius: BorderRadius.circular(_radius),
+              border: Border.all(color: _keyBorder, width: .3),
             ),
             child: Material(
               color: Colors.transparent,
-              borderRadius: BorderRadius.circular(_radius + 6),
+              borderRadius: BorderRadius.circular(_radius),
               child: InkWell(
-                borderRadius: BorderRadius.circular(_radius + 6),
+                borderRadius: BorderRadius.circular(_radius),
                 onTap: () {
                   _vibrate();
                   onTap();
                 },
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
+                child: SizedBox.expand(
+                  child: Center(
                     child: Icon(
                       icon,
                       size: _safeIconSize(keyH),
                       color: _textColor,
-                      shadows: const [
-                        Shadow(
-                          color: Color(0x55000000),
-                          offset: Offset(0.8, 1.0),
-                          blurRadius: 1.2,
-                        ),
-                      ],
                     ),
                   ),
                 ),
@@ -211,14 +231,6 @@ class CustomKeyboard extends StatelessWidget {
     );
   }
 
-  Widget _row(List<Widget> children) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: children,
-    );
-  }
-
   List<Widget> _withGaps(List<Widget> rows) {
     final widgets = <Widget>[];
     for (int i = 0; i < rows.length; i++) {
@@ -228,11 +240,14 @@ class CustomKeyboard extends StatelessWidget {
     return widgets;
   }
 
-  Widget _column(List<Widget> rows) {
+  Widget _column(List<Widget> rows, double rowHeight, {double rowGap = 1}) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: _withGaps(rows),
+      children: [
+        for (int i = 0; i < rows.length; i++) ...[
+          SizedBox(height: rowHeight, child: rows[i]),
+          if (i < rows.length - 1) SizedBox(height: rowGap),
+        ],
+      ],
     );
   }
 
@@ -242,22 +257,26 @@ class CustomKeyboard extends StatelessWidget {
   // ===================================================================
   Widget _layout1(double maxH) {
     const rowCount = 4;
-    final kH = _keyHeight(maxH, rowCount);
+    final kH = _keyHeight(maxH, rowCount) - 3;
 
-    return _column([
-      _row('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row([
-        _ghost(kH),
-        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH),
-      ]),
-      _row([
-        _clearKey(kH, flex: 1),
-        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-        _backspaceKey(kH, flex: 1),
-      ]),
-    ]);
+    return _column(
+      [
+        _indentRow('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
+        _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+        _indentRow([
+          // _ghost(kH),
+          ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+          // _ghost(kH),
+        ]),
+        _indentRow([
+          _clearKey(kH, flex: 1),
+          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+          _backspaceKey(kH, flex: 1),
+        ]),
+      ],
+      73,
+      rowGap: 0,
+    );
   }
 
   // ===================================================================
@@ -265,43 +284,52 @@ class CustomKeyboard extends StatelessWidget {
   // Clear kiri dan backspace kanan dibuat besar.
   // ===================================================================
   Widget _layout2(double maxH) {
-    const rowCount = 6;
-    final kH = _keyHeight(maxH, rowCount);
+    const rowCount = 7;
+    final kH = _keyHeight(maxH, rowCount) + 4;
 
-    return _column([
-      _row([
-        _clearKey(kH, flex: 2),
-        _charKey('1', kH),
-        _charKey('2', kH),
-        _charKey('3', kH),
-        _backspaceKey(kH, flex: 2),
-      ]),
-      _row([
-        _ghost(kH, flex: 2),
-        _charKey('4', kH),
-        _charKey('5', kH),
-        _charKey('6', kH),
-        _ghost(kH, flex: 2),
-      ]),
-      _row([
-        _charKey('0', kH, flex: 2),
-        _charKey('7', kH),
-        _charKey('8', kH),
-        _charKey('9', kH),
-        _charKey('0', kH, flex: 2),
-      ]),
-      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row([
-        _ghost(kH),
-        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH),
-      ]),
-      _row([
-        _clearKey(kH, flex: 1),
-        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-        _backspaceKey(kH, flex: 1),
-      ]),
-    ]);
+    return _column(
+      [
+        _indentRow([_charKey('1', kH), _charKey('2', kH), _charKey('3', kH)]),
+
+        _indentRow(
+          [_charKey('4', kH), _charKey('5', kH), _charKey('6', kH)],
+          left: 0,
+          right: 0,
+        ),
+
+        _indentRow(
+          [_charKey('7', kH), _charKey('8', kH), _charKey('9', kH)],
+          left: 0,
+          right: 0,
+        ),
+
+        _indentRow(
+          [_clearKey(kH), _charKey('0', kH), _backspaceKey(kH)],
+          left: 0,
+          right: 0,
+        ),
+
+        _indentRow('QWERTYUIOP'.split('').map((e) => _charKey(e, kH)).toList()),
+
+        _indentRow(
+          'ASDFGHJKL'.split('').map((e) => _charKey(e, kH)).toList(),
+          left: 0,
+          right: 0,
+        ),
+
+        _indentRow(
+          [
+            _clearKey(kH),
+            ...'ZXCVBNM'.split('').map((e) => _charKey(e, kH)),
+            _backspaceKey(kH),
+          ],
+          left: 0,
+          right: 0,
+        ),
+      ],
+      40,
+      rowGap: 2,
+    );
   }
 
   // ===================================================================
@@ -309,23 +337,27 @@ class CustomKeyboard extends StatelessWidget {
   // ===================================================================
   Widget _layout3(double maxH) {
     const rowCount = 5;
-    final kH = _keyHeight(maxH, rowCount);
+    final kH = _keyHeight(maxH, rowCount) - 5;
 
-    return _column([
-      _row('12345'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row('67890'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row([
-        _ghost(kH),
-        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH),
-      ]),
-      _row([
-        _clearKey(kH, flex: 1),
-        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-        _backspaceKey(kH, flex: 1),
-      ]),
-    ]);
+    return _column(
+      [
+        _indentRow('12345'.split('').map((c) => _charKey(c, kH)).toList()),
+        _indentRow('67890'.split('').map((c) => _charKey(c, kH)).toList()),
+        _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+        _indentRow([
+          // _ghost(kH),
+          ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+          // _ghost(kH),
+        ]),
+        _indentRow([
+          _clearKey(kH, flex: 1),
+          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+          _backspaceKey(kH, flex: 1),
+        ]),
+      ],
+      57,
+      rowGap: 1,
+    );
   }
 
   // ===================================================================
@@ -336,39 +368,47 @@ class CustomKeyboard extends StatelessWidget {
     final kH = _keyHeight(maxH, rowCount);
 
     return _column([
-      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row([
-        _ghost(kH),
-        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH),
-      ]),
-      _row([
-        _ghost(kH, flex: 2),
-        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH, flex: 2),
-      ]),
-      _row([
-        _clearKey(kH, flex: 2),
+      _indentRow('QWERTYUIOP'.split('').map((e) => _charKey(e, kH)).toList()),
+
+      _indentRow(
+        'ASDFGHJKL'.split('').map((e) => _charKey(e, kH)).toList(),
+        left: 0,
+        right: 0,
+      ),
+
+      _indentRow(
+        [
+          _clearKey(kH),
+          ...'ZXCVBNM'.split('').map((e) => _charKey(e, kH)),
+          _backspaceKey(kH),
+        ],
+        left: 0,
+        right: 0,
+      ),
+
+      _indentRow([
         _charKey('1', kH),
         _charKey('2', kH),
         _charKey('3', kH),
-        _backspaceKey(kH, flex: 2),
-      ]),
-      _row([
-        _ghost(kH, flex: 2),
         _charKey('4', kH),
         _charKey('5', kH),
-        _charKey('6', kH),
-        _ghost(kH, flex: 2),
       ]),
-      _row([
-        _charKey('0', kH, flex: 2),
+
+      _indentRow([
+        _charKey('6', kH),
         _charKey('7', kH),
         _charKey('8', kH),
         _charKey('9', kH),
-        _charKey('0', kH, flex: 2),
+        _charKey('0', kH),
       ]),
-    ]);
+
+      _indentRow([
+        _clearKey(kH, flex: 2),
+        _charKey('.', kH),
+        _charKey('-', kH),
+        _backspaceKey(kH, flex: 2),
+      ]),
+    ], 48);
   }
 
   // ===================================================================
@@ -379,36 +419,36 @@ class CustomKeyboard extends StatelessWidget {
     final kH = _keyHeight(maxH, rowCount);
 
     return _column([
-      _row([
+      _indentRow([
         _charKey('1', kH),
         _charKey('2', kH),
         _charKey('3', kH),
         _backspaceKey(kH, flex: 2),
       ]),
-      _row([
+      _indentRow([
         _charKey('4', kH),
         _charKey('5', kH),
         _charKey('6', kH),
         _charKey('0', kH, flex: 2),
       ]),
-      _row([
+      _indentRow([
         _charKey('7', kH),
         _charKey('8', kH),
         _charKey('9', kH),
         _clearKey(kH, flex: 2),
       ]),
-      _row('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-      _row([
-        _ghost(kH),
+      _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow([
+        // _ghost(kH),
         ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-        _ghost(kH),
+        // _ghost(kH),
       ]),
-      _row([
+      _indentRow([
         _clearKey(kH, flex: 1),
         ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
         _backspaceKey(kH, flex: 1),
       ]),
-    ]);
+    ], 48);
   }
 
   Widget _buildLayout(double maxH) {
@@ -430,24 +470,24 @@ class CustomKeyboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final safeHeight = height.clamp(120.0, 420.0);
+    final maxHeight = MediaQuery.of(context).size.height * 0.38;
+
+    final safeHeight = math.min(height, maxHeight);
+
+    final rowCount = switch (layoutType) {
+      2 => 7,
+      4 => 6,
+      5 => 6,
+      3 => 5,
+      _ => 4,
+    };
 
     return SizedBox(
       width: double.infinity,
       height: safeHeight,
-      child: ClipRect(
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: _keyboardBg),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxH = constraints.maxHeight.isFinite
-                  ? constraints.maxHeight
-                  : safeHeight;
-
-              return SizedBox.expand(child: _buildLayout(maxH));
-            },
-          ),
-        ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: _keyboardBg),
+        child: _buildLayout(safeHeight),
       ),
     );
   }

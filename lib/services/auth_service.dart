@@ -203,6 +203,15 @@ class AuthService {
     Map<String, dynamic> body, {
     List<int>? photoBytes,
     String? photoFileName,
+
+    List<int>? ktpPhotoBytes,
+    String? ktpPhotoFileName,
+
+    List<int>? selfieKtpPhotoBytes,
+    String? selfieKtpPhotoFileName,
+
+    List<int>? suratTugasPhotoBytes,
+    String? suratTugasPhotoFileName,
   }) async {
     final token = await TokenStorage.getToken();
     final url = Uri.parse('$_base/profile/update');
@@ -227,6 +236,36 @@ class AuthService {
             'photo',
             photoBytes,
             filename: photoFileName,
+          ),
+        );
+      }
+
+      if (ktpPhotoBytes != null && ktpPhotoFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'ktp_photo',
+            ktpPhotoBytes,
+            filename: ktpPhotoFileName,
+          ),
+        );
+      }
+
+      if (selfieKtpPhotoBytes != null && selfieKtpPhotoFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'selfie_ktp_photo',
+            selfieKtpPhotoBytes,
+            filename: selfieKtpPhotoFileName,
+          ),
+        );
+      }
+
+      if (suratTugasPhotoBytes != null && suratTugasPhotoFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'surat_tugas_photo',
+            suratTugasPhotoBytes,
+            filename: suratTugasPhotoFileName,
           ),
         );
       }

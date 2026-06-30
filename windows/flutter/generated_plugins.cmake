@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  downloadsfolder
   file_selector_windows
   geolocator_windows
   url_launcher_windows

@@ -6,6 +6,7 @@ import '../storage/token_storage.dart';
 import '../services/auth_service.dart';
 import '../features/dashboard/pages/dashboard_page.dart';
 import '../features/dashboard/pages/history_log.dart';
+import '../features/dashboard/pages/kendaraan_management_page.dart';
 import '../features/dashboard/pages/keyboard_setting_page.dart';
 import '../features/dashboard/pages/payment_page.dart';
 import '../features/dashboard/pages/profile_page.dart';
@@ -176,127 +177,144 @@ class TopBar extends StatelessWidget {
                     : Icons.dark_mode_rounded,
                 onPressed: AppTheme.toggleTheme,
               ),
-              // FutureBuilder<String?>(
-              //   future: TokenStorage.getPhoto(),
-              //   builder: (context, snapshot) {
-              //     final photoUrl = snapshot.data;
-              //     return Tooltip(
-              //       message: 'Profil',
-              //       child: InkWell(
-              //         borderRadius: BorderRadius.circular(14),
-              //         onTap: () => _navigate(context, 3),
-              //         child: Container(
-              //           width: 40,
-              //           height: 40,
-              //           padding: const EdgeInsets.all(5),
-              //           decoration: BoxDecoration(
-              //             color: Colors.white.withValues(alpha: 0.14),
-              //             borderRadius: BorderRadius.circular(14),
-              //           ),
-              //           child: (photoUrl != null && photoUrl.isNotEmpty)
-              //               ? CircleAvatar(
-              //                   backgroundImage: NetworkImage(photoUrl),
-              //                 )
-              //               : const Icon(
-              //                   Icons.person_rounded,
-              //                   color: Colors.white,
-              //                   size: 21,
-              //                 ),
-              //         ),
-              //       ),
-              //     );
-              //   },
-              // ),
-              PopupMenuButton<int>(
-                tooltip: 'Menu',
-                offset: const Offset(0, 52),
-                constraints: const BoxConstraints(minWidth: 360, maxWidth: 360),
-                color: theme.colorScheme.surface,
-                elevation: 16,
-                shadowColor: Colors.black.withValues(alpha: 0.22),
-                clipBehavior: Clip.antiAlias,
-                menuPadding: const EdgeInsets.all(8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                  side: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.55,
-                    ),
-                  ),
+              FutureBuilder<Map<String, dynamic>>(
+                future: AuthService.getProfile().catchError(
+                  (_) => <String, dynamic>{},
                 ),
-                onSelected: (value) async {
-                  if (value == -1) {
-                    await logout(context);
-                  } else if (value == 4) {
-                    await _openKeyboardSettings(context);
-                  } else {
-                    _navigate(context, value);
-                  }
+                builder: (context, profileSnapshot) {
+                  final res = profileSnapshot.data;
+                  final data = res != null
+                      ? ((res['data'] as Map<String, dynamic>?) ??
+                            (res['user'] as Map<String, dynamic>?) ??
+                            res)
+                      : null;
+                  final role = data?['role']?.toString().trim().toLowerCase();
+                  const allowedRoles = {
+                    'super_admin',
+                    'admin',
+                    'admin_leasing',
+                    'super admin',
+                    'admin leasing',
+                  };
+                  final hasAccess = role != null && allowedRoles.contains(role);
+
+                  return PopupMenuButton<int>(
+                    tooltip: 'Menu',
+                    offset: const Offset(0, 52),
+                    constraints: const BoxConstraints(
+                      minWidth: 360,
+                      maxWidth: 360,
+                    ),
+                    color: theme.colorScheme.surface,
+                    elevation: 16,
+                    shadowColor: Colors.black.withValues(alpha: 0.22),
+                    clipBehavior: Clip.antiAlias,
+                    menuPadding: const EdgeInsets.all(8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      side: BorderSide(
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.55,
+                        ),
+                      ),
+                    ),
+                    onSelected: (value) async {
+                      if (value == -1) {
+                        await logout(context);
+                      } else if (value == 4) {
+                        await _openKeyboardSettings(context);
+                      } else if (value == 5) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const KendaraanManagementPage(),
+                          ),
+                        );
+                      } else {
+                        _navigate(context, value);
+                      }
+                    },
+                    itemBuilder: (context) {
+                      return [
+                        for (var index = 0; index < _menuItems.length; index++)
+                          PopupMenuItem<int>(
+                            value: index,
+                            height: 62,
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: _menuTile(
+                              context,
+                              _menuItems[index],
+                              index == activeIndex,
+                            ),
+                          ),
+                        const PopupMenuDivider(height: 12),
+                        PopupMenuItem<int>(
+                          value: 4,
+                          height: 62,
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: _menuTile(
+                            context,
+                            const _NavigationItem(
+                              'Setting Keyboard',
+                              'Layout, ukuran, dan getaran',
+                              Icons.keyboard_alt_outlined,
+                            ),
+                            false,
+                          ),
+                        ),
+                        // Item Manajemen Kendaraan — hanya untuk role admin
+                        if (hasAccess)
+                          PopupMenuItem<int>(
+                            value: 5,
+                            height: 62,
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: _AdminMenuItemWrapper(
+                              child: _menuTile(
+                                context,
+                                const _NavigationItem(
+                                  'Manajemen Kendaraan',
+                                  'Import & input data kendaraan',
+                                  Icons.directions_car_rounded,
+                                ),
+                                false,
+                                accent: const Color(0xFF536DFE),
+                              ),
+                            ),
+                          ),
+                        const PopupMenuDivider(height: 12),
+                        PopupMenuItem<int>(
+                          value: -1,
+                          height: 62,
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: _menuTile(
+                            context,
+                            const _NavigationItem(
+                              'Logout',
+                              'Keluar dari akun ini',
+                              Icons.logout_rounded,
+                            ),
+                            false,
+                            destructive: true,
+                          ),
+                        ),
+                      ];
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      margin: const EdgeInsets.only(left: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 23,
+                      ),
+                    ),
+                  );
                 },
-                itemBuilder: (context) => [
-                  // PopupMenuItem<int>(
-                  //   enabled: false,
-                  //   height: 66,
-                  //   child: _menuHeader(context),
-                  // ),
-                  // const PopupMenuDivider(height: 12),
-                  for (var index = 0; index < _menuItems.length; index++)
-                    PopupMenuItem<int>(
-                      value: index,
-                      height: 62,
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: _menuTile(
-                        context,
-                        _menuItems[index],
-                        index == activeIndex,
-                      ),
-                    ),
-                  const PopupMenuDivider(height: 12),
-                  PopupMenuItem<int>(
-                    value: 4,
-                    height: 62,
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: _menuTile(
-                      context,
-                      const _NavigationItem(
-                        'Setting Keyboard',
-                        'Layout, ukuran, dan getaran',
-                        Icons.keyboard_alt_outlined,
-                      ),
-                      false,
-                    ),
-                  ),
-                  const PopupMenuDivider(height: 12),
-                  PopupMenuItem<int>(
-                    value: -1,
-                    height: 62,
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: _menuTile(
-                      context,
-                      const _NavigationItem(
-                        'Logout',
-                        'Keluar dari akun ini',
-                        Icons.logout_rounded,
-                      ),
-                      false,
-                      destructive: true,
-                    ),
-                  ),
-                ],
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  margin: const EdgeInsets.only(left: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: const Icon(
-                    Icons.menu_rounded,
-                    color: Colors.white,
-                    size: 23,
-                  ),
-                ),
               ),
             ],
           );
@@ -334,12 +352,14 @@ class TopBar extends StatelessWidget {
     _NavigationItem item,
     bool selected, {
     bool destructive = false,
+    Color? accent,
   }) {
     final color = destructive
         ? Theme.of(context).colorScheme.error
-        : selected
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface;
+        : accent ??
+              (selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
@@ -425,53 +445,6 @@ class TopBar extends StatelessWidget {
     );
   }
 
-  Widget _menuHeader(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF536DFE), Color(0xFF7C4DFF)],
-              ),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: const Icon(
-              Icons.grid_view_rounded,
-              color: Colors.white,
-              size: 21,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Menu Recovery Track',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Pilih halaman atau pengaturan',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Color themeColor(BuildContext context) {
     return Theme.of(context).colorScheme.onSurfaceVariant;
   }
@@ -483,4 +456,43 @@ class _NavigationItem {
   final IconData icon;
 
   const _NavigationItem(this.label, this.subtitle, this.icon);
+}
+
+/// Wrapper untuk item menu Manajemen Kendaraan — selalu tampil,
+/// role guard ditangani di dalam halaman KendaraanManagementPage.
+class _AdminMenuItemWrapper extends StatelessWidget {
+  final Widget child;
+  const _AdminMenuItemWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          right: 4,
+          top: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF536DFE).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: const Color(0xFF536DFE).withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Text(
+              'ADMIN',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF536DFE),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
