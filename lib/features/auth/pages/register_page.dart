@@ -30,6 +30,7 @@ class _RegisterPageState extends State<RegisterPage> {
   XFile? _ktpPhoto;
   XFile? _selfieKtpPhoto;
   XFile? _suratTugasPhoto;
+  XFile? _sppiPhoto;
   bool _submitting = false;
   bool _hidePassword = true;
   bool _hideConfirmation = true;
@@ -79,7 +80,8 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
     if (_ktpPhoto == null ||
         _selfieKtpPhoto == null ||
-        _suratTugasPhoto == null) {
+        _suratTugasPhoto == null ||
+        _sppiPhoto == null) {
       _showMessage('Semua dokumen foto wajib diambil.');
       return;
     }
@@ -98,6 +100,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ktpPhoto: _ktpPhoto!,
         selfieKtpPhoto: _selfieKtpPhoto!,
         suratTugasPhoto: _suratTugasPhoto!,
+        sppiPhoto: _sppiPhoto!,
       );
 
       if (!mounted) return;
@@ -384,6 +387,16 @@ class _RegisterPageState extends State<RegisterPage> {
                       onTap: () => _takePhoto(
                         DocumentCaptureType.suratTugas,
                         (photo) => _suratTugasPhoto = photo,
+                      ),
+                    ),
+                    _PhotoField(
+                      title: 'Foto SPPI',
+                      subtitle: 'Ambil foto SPPI secara langsung',
+                      icon: Icons.assignment_outlined,
+                      file: _sppiPhoto,
+                      onTap: () => _takePhoto(
+                        DocumentCaptureType.sppi,
+                        (photo) => _sppiPhoto = photo,
                       ),
                     ),
                     Text(

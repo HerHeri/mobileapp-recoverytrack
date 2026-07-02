@@ -546,7 +546,7 @@ class _KendaraanManagementPageState extends State<KendaraanManagementPage> {
                         radius: 24,
                         backgroundColor: const Color(
                           0xFF536DFE,
-                        ).withOpacity(.12),
+                        ).withValues(alpha: .12),
                         child: const Icon(
                           Icons.directions_car_rounded,
                           size: 24,
@@ -698,7 +698,9 @@ class _KendaraanManagementPageState extends State<KendaraanManagementPage> {
 
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: const Color(0xFF536DFE).withOpacity(.12),
+                      backgroundColor: const Color(
+                        0xFF536DFE,
+                      ).withValues(alpha: .12),
                       child: const Icon(
                         Icons.directions_car_rounded,
                         size: 24,

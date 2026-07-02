@@ -23,6 +23,7 @@ class AuthService {
     required XFile ktpPhoto,
     required XFile selfieKtpPhoto,
     required XFile suratTugasPhoto,
+    required XFile sppiPhoto,
   }) async {
     final request = http.MultipartRequest(
       'POST',
@@ -52,6 +53,7 @@ class AuthService {
       await filePart('ktp_photo', ktpPhoto),
       await filePart('selfie_ktp_photo', selfieKtpPhoto),
       await filePart('surat_tugas_photo', suratTugasPhoto),
+      await filePart('sppi_photo', sppiPhoto),
     ]);
 
     try {
@@ -120,6 +122,14 @@ class AuthService {
       if (response.statusCode == 200) {
         return data;
       } else {
+        final hasToken = data['data'] is Map && data['data']['token'] != null;
+        final userData = hasToken ? data['data']['user'] : null;
+        final isPending = userData is Map && userData['status'] == 'Pending';
+        final statusTerms = userData is Map ? userData['status_terms'] : null;
+        if (hasToken && isPending && (statusTerms == null || statusTerms == 'No')) {
+          return data;
+        }
+
         throw Exception(
           data['message'] ??
               'Terjadi kesalahan pada server (Status: ${response.statusCode})',
@@ -212,6 +222,9 @@ class AuthService {
 
     List<int>? suratTugasPhotoBytes,
     String? suratTugasPhotoFileName,
+
+    List<int>? sppiPhotoBytes,
+    String? sppiPhotoFileName,
   }) async {
     final token = await TokenStorage.getToken();
     final url = Uri.parse('$_base/profile/update');
@@ -266,6 +279,16 @@ class AuthService {
             'surat_tugas_photo',
             suratTugasPhotoBytes,
             filename: suratTugasPhotoFileName,
+          ),
+        );
+      }
+
+      if (sppiPhotoBytes != null && sppiPhotoFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'sppi_photo',
+            sppiPhotoBytes,
+            filename: sppiPhotoFileName,
           ),
         );
       }

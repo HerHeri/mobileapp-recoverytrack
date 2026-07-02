@@ -9,8 +9,10 @@ import '../../../models/kendaraan.dart';
 import '../../../services/kendaraan_service.dart';
 import '../../../services/update_service.dart';
 import '../../../services/keyboard_setting_service.dart';
+import '../../../services/auth_service.dart';
 import '../../../widgets/update_dialog.dart';
 import '../../../widgets/custom_keyboard.dart';
+import '../../../widgets/profile_incomplete_banner.dart';
 import 'keyboard_setting_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -49,6 +51,10 @@ class _DashboardPageState extends State<DashboardPage>
   bool _updateChecked = false;
   int _searchRequestId = 0;
 
+  // --- Profile completeness state ---
+  List<String> _missingDocuments = [];
+  bool _profileCheckDone = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +68,7 @@ class _DashboardPageState extends State<DashboardPage>
     );
     _loadSettings();
     _checkForAppUpdate();
+    _checkProfileCompleteness();
   }
 
   Future<void> _loadSettings() async {
@@ -88,6 +95,7 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   void _scheduleSearchFocus() {
+    if (_profileCheckDone && _missingDocuments.isNotEmpty) return;
     _focusTimer?.cancel();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -111,9 +119,56 @@ class _DashboardPageState extends State<DashboardPage>
     _loadSettings();
   }
 
+  /// Check if the user's profile documents are complete.
+  /// If not, set [_missingDocuments] so the banner is shown.
+  Future<void> _checkProfileCompleteness() async {
+    try {
+      final response = await AuthService.getProfile();
+      final data =
+          (response['data'] as Map<String, dynamic>?) ??
+          (response['user'] as Map<String, dynamic>?) ??
+          response;
+
+      final missing = <String>[];
+      if (data['ktp_photo'] == null ||
+          data['ktp_photo'].toString().isEmpty) {
+        missing.add('Foto KTP');
+      }
+      if (data['selfie_ktp_photo'] == null ||
+          data['selfie_ktp_photo'].toString().isEmpty) {
+        missing.add('Selfie dengan KTP');
+      }
+      if (data['surat_tugas_photo'] == null ||
+          data['surat_tugas_photo'].toString().isEmpty) {
+        missing.add('Surat Tugas');
+      }
+      if (data['sppi_photo'] == null ||
+          data['sppi_photo'].toString().isEmpty) {
+        missing.add('Foto SPPI');
+      }
+
+      if (mounted) {
+        setState(() {
+          _missingDocuments = missing;
+          _profileCheckDone = true;
+        });
+        if (missing.isNotEmpty) {
+          _focusNode.unfocus();
+        }
+      }
+    } catch (_) {
+      // If profile check fails, don't block the user — they'll see errors on search
+      if (mounted) setState(() => _profileCheckDone = true);
+    }
+  }
+
+
   // --- Search logic with debounce ---
   Future<void> _handleSearch(String query, String filter) async {
     _debounce?.cancel();
+    if (_profileCheckDone && _missingDocuments.isNotEmpty) {
+      return;
+    }
     final normalizedQuery = query.trim();
     final requestId = ++_searchRequestId;
 
@@ -298,8 +353,17 @@ class _DashboardPageState extends State<DashboardPage>
               availableKeyboardHeight,
             );
 
+            final isProfileIncomplete =
+                _profileCheckDone && _missingDocuments.isNotEmpty;
+
             return Column(
               children: [
+                // --- Profile incomplete banner (blocks search) ---
+                if (isProfileIncomplete)
+                  ProfileIncompleteBanner(
+                    missingDocuments: _missingDocuments,
+                  ),
+
                 // --- Results area (Expanded so it takes remaining space) ---
                 Expanded(
                   child: LayoutBuilder(
@@ -391,22 +455,29 @@ class _DashboardPageState extends State<DashboardPage>
                   ),
                 ),
 
-                // --- Search card (compact) ---
-                SearchCard(
-                  onSearch: _handleSearch,
-                  controller: _controller,
-                  filter: _filter,
-                  onFilterChanged: (v) {
-                    setState(() => _filter = v);
-                    _handleSearch(_controller.text, v);
-                  },
-                  readOnly: isCustomKeyboard && _keyboardVisible,
-                  focusNode: _focusNode,
-                  textSize: (_textSize * 0.65).clamp(18.0, 32.0),
+                // --- Search card (compact) — blocked when profile incomplete ---
+                AbsorbPointer(
+                  absorbing: isProfileIncomplete,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: isProfileIncomplete ? 0.4 : 1.0,
+                    child: SearchCard(
+                      onSearch: _handleSearch,
+                      controller: _controller,
+                      filter: _filter,
+                      onFilterChanged: (v) {
+                        setState(() => _filter = v);
+                        _handleSearch(_controller.text, v);
+                      },
+                      readOnly: isCustomKeyboard && _keyboardVisible,
+                      focusNode: _focusNode,
+                      textSize: (_textSize * 0.65).clamp(18.0, 32.0),
+                    ),
+                  ),
                 ),
 
                 // --- Keyboard toggle (only when custom) ---
-                if (isCustomKeyboard)
+                if (isCustomKeyboard && !isProfileIncomplete)
                   GestureDetector(
                     onTap: _toggleKeyboard,
                     child: Container(
@@ -424,7 +495,7 @@ class _DashboardPageState extends State<DashboardPage>
                   ),
 
                 // --- Custom Keyboard ---
-                if (isCustomKeyboard)
+                if (isCustomKeyboard && !isProfileIncomplete)
                   SizeTransition(
                     sizeFactor: _animSlide,
                     alignment: Alignment.bottomCenter,

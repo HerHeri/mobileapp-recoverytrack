@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../widgets/custom_textfield.dart';
 import '../../../services/auth_service.dart';
 import 'login_button.dart';
@@ -12,6 +13,7 @@ import '../../dashboard/pages/dashboard_page.dart';
 import '../pages/forgot_password_page.dart';
 import '../pages/terms_page.dart';
 import '../pages/register_page.dart';
+import '../../dashboard/pages/profile_page.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -77,16 +79,21 @@ class _LoginFormState extends State<LoginForm> {
         deviceType: deviceType,
       );
 
-      if (response["success"] == true) {
+      final hasData = response['data'] != null && response['data']['token'] != null;
+      final userData = hasData ? response['data']['user'] : null;
+      final statusTerms = userData != null ? userData['status_terms'] : null;
+      final isPending = userData != null && userData['status'] == 'Pending';
+
+      if (response["success"] == true || (isPending && (statusTerms == "No" || statusTerms == null))) {
         final token = response['data']['token'];
         final photo = response['data']['user']?['photo'];
+        final userData = response['data']['user'];
 
         await TokenStorage.saveToken(token);
         if (photo != null) {
           await TokenStorage.savePhoto(photo.toString());
         }
 
-        final statusTerms = response['data']['user']['status_terms'];
         final termsText = response['data']['terms'] ?? "";
 
         if (statusTerms == "No" || statusTerms == null) {
@@ -95,10 +102,23 @@ class _LoginFormState extends State<LoginForm> {
             MaterialPageRoute(builder: (_) => TermsPage(terms: termsText)),
           );
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const DashboardPage()),
-          );
+          // Show mandatory requirements dialog BEFORE navigating
+          // This ensures user sees the notification right after login
+          final goToProfile = await _checkPostLoginRequirements(context, userData);
+
+          if (mounted) {
+            if (goToProfile) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardPage()),
+              );
+            }
+          }
         }
       } else {
         throw Exception(response["message"] ?? "Login gagal");
@@ -112,6 +132,34 @@ class _LoginFormState extends State<LoginForm> {
         isLoading = false;
       });
     }
+  }
+
+  // Request location access after login (silently, in the background).
+  // Document completeness is checked by the dashboard via getProfile().
+  Future<bool> _checkPostLoginRequirements(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) async {
+    if (!mounted) return false;
+
+    // Check location access permission
+    LocationPermission locationPermission = LocationPermission.denied;
+    bool needsLocationAccess = false;
+    try {
+      locationPermission = await Geolocator.checkPermission();
+      needsLocationAccess =
+          locationPermission == LocationPermission.denied ||
+          locationPermission == LocationPermission.deniedForever;
+    } catch (_) {}
+
+    // Silently request location permission if not yet granted (and not permanently denied)
+    if (needsLocationAccess && locationPermission != LocationPermission.deniedForever && mounted) {
+      try {
+        await Geolocator.requestPermission();
+      } catch (_) {}
+    }
+
+    return false;
   }
 
   @override

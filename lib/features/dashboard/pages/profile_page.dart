@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../auth/pages/document_camera_page.dart';
 import '../../../services/auth_service.dart';
 import '../../../layout/main_layout.dart';
 import '../../../storage/token_storage.dart';
 import 'package:intl/intl.dart';
+
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -30,6 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
   XFile? _ktpPhoto;
   XFile? _selfieKtpPhoto;
   XFile? _suratTugasPhoto;
+  XFile? _sppiPhoto;
   final ImagePicker _picker = ImagePicker();
 
   Map<String, dynamic>? _profileData;
@@ -71,8 +74,64 @@ class _ProfilePageState extends State<ProfilePage> {
         case 'surat':
           _suratTugasPhoto = image;
           break;
+
+        case 'sppi':
+          _sppiPhoto = image;
+          break;
       }
     });
+  }
+
+  Future<void> _takeLivePhoto(DocumentCaptureType type, String key) async {
+    try {
+      final photo = await Navigator.push<XFile>(
+        context,
+        MaterialPageRoute(builder: (_) => DocumentCameraPage(type: type)),
+      );
+      if (photo == null) return;
+
+      if (await photo.length() > 2 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Ukuran foto maksimal 2 MB. Silakan ambil ulang foto.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          switch (key) {
+            case 'ktp':
+              _ktpPhoto = photo;
+              break;
+            case 'selfie':
+              _selfieKtpPhoto = photo;
+              break;
+            case 'surat':
+              _suratTugasPhoto = photo;
+              break;
+            case 'sppi':
+              _sppiPhoto = photo;
+              break;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Kamera tidak dapat dibuka. Pastikan izin kamera sudah diberikan.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -117,6 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _ktpPhoto = null;
         _selfieKtpPhoto = null;
         _suratTugasPhoto = null;
+        _sppiPhoto = null;
         _isLoading = false;
       });
     } catch (e) {
@@ -130,6 +190,66 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _handleUpdate() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validate profile data exists
+    if (_profileData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data profil tidak tersedia"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate mandatory photo fields
+    if (_ktpPhoto == null &&
+        (_profileData!['ktp_photo'] == null ||
+            _profileData!['ktp_photo'].toString().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Foto KTP wajib diisi"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selfieKtpPhoto == null &&
+        (_profileData!['selfie_ktp_photo'] == null ||
+            _profileData!['selfie_ktp_photo'].toString().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Selfie dengan KTP wajib diisi"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_suratTugasPhoto == null &&
+        (_profileData!['surat_tugas_photo'] == null ||
+            _profileData!['surat_tugas_photo'].toString().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Surat Tugas wajib diisi"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_sppiPhoto == null &&
+        (_profileData!['sppi_photo'] == null ||
+            _profileData!['sppi_photo'].toString().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Foto SPPI wajib diisi"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -164,6 +284,11 @@ class _ProfilePageState extends State<ProfilePage> {
             ? null
             : await _suratTugasPhoto!.readAsBytes(),
         suratTugasPhotoFileName: _suratTugasPhoto?.name,
+
+        sppiPhotoBytes: _sppiPhoto == null
+            ? null
+            : await _sppiPhoto!.readAsBytes(),
+        sppiPhotoFileName: _sppiPhoto?.name,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
             _ktpPhoto = null;
             _selfieKtpPhoto = null;
             _suratTugasPhoto = null;
+            _sppiPhoto = null;
           });
         } else {
           _fetchProfile();
@@ -266,6 +392,24 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildProfileView() {
     final data = _profileData!;
     final dateFormat = DateFormat('dd MMM yyyy');
+    // Check if profile is approved by admin (using paket_status field)
+    final isProfileApproved =
+        data['paket_status']?.toString().toLowerCase() == 'approved';
+
+
+
+    final hasKtp =
+        data['ktp_photo'] != null && data['ktp_photo'].toString().isNotEmpty;
+    final hasSelfie =
+        data['selfie_ktp_photo'] != null &&
+        data['selfie_ktp_photo'].toString().isNotEmpty;
+    final hasSurat =
+        data['surat_tugas_photo'] != null &&
+        data['surat_tugas_photo'].toString().isNotEmpty;
+    final hasSppi =
+        data['sppi_photo'] != null &&
+        data['sppi_photo'].toString().isNotEmpty;
+    final isPhotosIncomplete = !hasKtp || !hasSelfie || !hasSurat || !hasSppi;
 
     // API menggunakan field "expired", bukan "exp"
     String expiryText = "-";
@@ -298,10 +442,133 @@ class _ProfilePageState extends State<ProfilePage> {
       onRefresh: _fetchProfile,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(9),
+        padding: const EdgeInsets.all(0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- BANNER: Sudah disetujui admin ---
+            if (isProfileApproved)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_rounded,
+                      color: Colors.green,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Profil Telah Disetujui',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Data profil Anda telah disetujui oleh admin. Anda tetap dapat memperbarui nama, password, dan dokumen pendukung jika diperlukan.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green[700],
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // --- BANNER: Dokumen belum lengkap ---
+            if (isPhotosIncomplete) ...[
+              Builder(
+                builder: (context) {
+                  final missing = <String>[];
+                  if (data['ktp_photo'] == null ||
+                      data['ktp_photo'].toString().isEmpty) {
+                    missing.add('Foto KTP');
+                  }
+                  if (data['selfie_ktp_photo'] == null ||
+                      data['selfie_ktp_photo'].toString().isEmpty) {
+                    missing.add('Selfie dengan KTP');
+                  }
+                  if (data['surat_tugas_photo'] == null ||
+                      data['surat_tugas_photo'].toString().isEmpty) {
+                    missing.add('Surat Tugas');
+                  }
+                  if (data['sppi_photo'] == null ||
+                      data['sppi_photo'].toString().isEmpty) {
+                    missing.add('Foto SPPI');
+                  }
+                  if (missing.isEmpty) return const SizedBox.shrink();
+
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Dokumen Belum Lengkap',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Lengkapi dokumen berikut untuk mengakses fitur pencarian:\n${missing.map((d) => '• $d').join('\n')}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange[800],
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+
             /// HEADER CARD
             Card(
               elevation: 4,
@@ -342,22 +609,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                   )
                                 : null,
                           ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                size: 14,
-                                color: Color(0xff764ba2),
+                          if (true)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 14,
+                                  color: Color(0xff764ba2),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -380,6 +648,32 @@ class _ProfilePageState extends State<ProfilePage> {
                               color: Colors.white.withOpacity(0.8),
                             ),
                           ),
+                          // Admin approval indicator
+                          if (isProfileApproved)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.5),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Disetujui Admin",
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -436,6 +730,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           labelText: "Nama Lengkap",
                           prefixIcon: Icon(Icons.person_outline),
                         ),
+                        readOnly: false,
                         validator: (v) =>
                             v!.isEmpty ? "Nama tidak boleh kosong" : null,
                       ),
@@ -446,6 +741,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           labelText: "Email",
                           prefixIcon: Icon(Icons.email),
                         ),
+                        readOnly: isProfileApproved,
                         validator: (v) =>
                             v!.isEmpty ? "Email tidak boleh kosong" : null,
                       ),
@@ -457,6 +753,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           labelText: "Nomor HP",
                           prefixIcon: Icon(Icons.phone),
                         ),
+                        readOnly: isProfileApproved,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -466,18 +763,20 @@ class _ProfilePageState extends State<ProfilePage> {
                           labelText: "Password Lama",
                           prefixIcon: const Icon(Icons.lock_reset_outlined),
                           suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureOldPassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureOldPassword = !_obscureOldPassword;
-                              });
-                            },
-                          ),
+                                  icon: Icon(
+                                    _obscureOldPassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureOldPassword =
+                                          !_obscureOldPassword;
+                                    });
+                                  },
+                                ),
                         ),
+                        readOnly: false,
                         validator: (v) {
                           if (_passwordController.text.isNotEmpty &&
                               v!.isEmpty) {
@@ -495,18 +794,20 @@ class _ProfilePageState extends State<ProfilePage> {
                               "Password Baru (Kosongkan jika tidak diubah)",
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureNewPassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureNewPassword = !_obscureNewPassword;
-                              });
-                            },
-                          ),
+                                  icon: Icon(
+                                    _obscureNewPassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureNewPassword =
+                                          !_obscureNewPassword;
+                                    });
+                                  },
+                                ),
                         ),
+                        readOnly: false,
                       ),
                       const SizedBox(height: 20),
                       _buildSectionTitle("Dokumen"),
@@ -514,21 +815,42 @@ class _ProfilePageState extends State<ProfilePage> {
                         title: "Foto KTP",
                         networkImage: data['ktp_photo'],
                         localImage: _ktpPhoto,
-                        onTap: () => _pickImage('ktp'),
+                        onTap: () =>
+                            _takeLivePhoto(DocumentCaptureType.ktp, 'ktp'),
+                        isLocked: false,
                       ),
                       const SizedBox(height: 12),
                       _buildDocumentPicker(
                         title: "Selfie Dengan KTP",
                         networkImage: data['selfie_ktp_photo'],
                         localImage: _selfieKtpPhoto,
-                        onTap: () => _pickImage('selfie'),
+                        onTap: () => _takeLivePhoto(
+                          DocumentCaptureType.selfieKtp,
+                          'selfie',
+                        ),
+                        isLocked: false,
                       ),
                       const SizedBox(height: 12),
                       _buildDocumentPicker(
                         title: "Surat Tugas",
                         networkImage: data['surat_tugas_photo'],
                         localImage: _suratTugasPhoto,
-                        onTap: () => _pickImage('surat'),
+                        onTap: () => _takeLivePhoto(
+                          DocumentCaptureType.suratTugas,
+                          'surat',
+                        ),
+                        isLocked: false,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDocumentPicker(
+                        title: "Foto SPPI",
+                        networkImage: data['sppi_photo'],
+                        localImage: _sppiPhoto,
+                        onTap: () => _takeLivePhoto(
+                          DocumentCaptureType.sppi,
+                          'sppi',
+                        ),
+                        isLocked: false,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
@@ -614,6 +936,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required String? networkImage,
     required XFile? localImage,
     required VoidCallback onTap,
+    bool isLocked = false,
   }) {
     Widget imageWidget;
 
@@ -655,18 +978,65 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (isLocked) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.lock_outline, size: 14, color: Colors.green),
+                ],
+              ],
+            ),
             const SizedBox(height: 10),
             imageWidget,
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onTap,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text("Pilih Foto"),
+            if (isLocked)
+              // Locked state: show non-interactive label
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.verified_rounded, size: 16, color: Colors.green),
+                    SizedBox(width: 6),
+                    Text(
+                      'Sudah Disetujui Admin',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onTap,
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text("Pilih Foto"),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        8,
+                      ), // atau 0 agar benar-benar kotak
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),

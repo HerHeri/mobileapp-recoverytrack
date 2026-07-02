@@ -38,8 +38,58 @@ class TopBar extends StatelessWidget {
     _NavigationItem('Profil', 'Informasi akun Anda', Icons.person_rounded),
   ];
 
-  void _navigate(BuildContext context, int index) {
+  Future<void> _navigate(BuildContext context, int index) async {
     if (index == activeIndex) return;
+
+    // Block access to search page if mandatory profile data not filled
+    if (index == 1) {
+      try {
+        final profileResponse = await AuthService.getProfile();
+        final data =
+            (profileResponse['data'] as Map<String, dynamic>?) ??
+            (profileResponse['user'] as Map<String, dynamic>?) ??
+            profileResponse;
+
+        // Check mandatory photo fields
+        final hasKtp =
+            data['ktp_photo'] != null &&
+            data['ktp_photo'].toString().isNotEmpty;
+        final hasSelfie =
+            data['selfie_ktp_photo'] != null &&
+            data['selfie_ktp_photo'].toString().isNotEmpty;
+        final hasSurat =
+            data['surat_tugas_photo'] != null &&
+            data['surat_tugas_photo'].toString().isNotEmpty;
+
+        if (!hasKtp || !hasSelfie || !hasSurat) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Harap lengkapi data profil (Foto KTP, Selfie KTP, Surat Tugas) sebelum mengakses halaman pencarian",
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          // Navigate to profile page instead
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
+          );
+          return;
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Gagal memeriksa data profil: ${e.toString().replaceAll('Exception: ', '')}",
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
 
     final Widget page = switch (index) {
       0 => const HistoryLogPage(),
@@ -231,7 +281,7 @@ class TopBar extends StatelessWidget {
                           ),
                         );
                       } else {
-                        _navigate(context, value);
+                        await _navigate(context, value);
                       }
                     },
                     itemBuilder: (context) {
@@ -263,24 +313,24 @@ class TopBar extends StatelessWidget {
                           ),
                         ),
                         // Item Manajemen Kendaraan — hanya untuk role admin
-                        if (hasAccess)
-                          PopupMenuItem<int>(
-                            value: 5,
-                            height: 62,
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: _AdminMenuItemWrapper(
-                              child: _menuTile(
-                                context,
-                                const _NavigationItem(
-                                  'Manajemen Kendaraan',
-                                  'Import & input data kendaraan',
-                                  Icons.directions_car_rounded,
-                                ),
-                                false,
-                                accent: const Color(0xFF536DFE),
-                              ),
-                            ),
-                          ),
+                        // if (hasAccess)
+                        //   PopupMenuItem<int>(
+                        //     value: 5,
+                        //     height: 62,
+                        //     padding: const EdgeInsets.symmetric(vertical: 2),
+                        //     child: _AdminMenuItemWrapper(
+                        //       child: _menuTile(
+                        //         context,
+                        //         const _NavigationItem(
+                        //           'Manajemen Kendaraan',
+                        //           'Import & input data kendaraan',
+                        //           Icons.directions_car_rounded,
+                        //         ),
+                        //         false,
+                        //         accent: const Color(0xFF536DFE),
+                        //       ),
+                        //     ),
+                        //   ),
                         const PopupMenuDivider(height: 12),
                         PopupMenuItem<int>(
                           value: -1,

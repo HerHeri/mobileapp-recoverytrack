@@ -1,7 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-enum DocumentCaptureType { ktp, selfieKtp, suratTugas }
+enum DocumentCaptureType { ktp, selfieKtp, suratTugas, sppi }
 
 class DocumentCameraPage extends StatefulWidget {
   final DocumentCaptureType type;
@@ -314,6 +314,8 @@ class _DocumentCameraPageState extends State<DocumentCameraPage>
         return 'Posisikan kepala dan bahu di oval, lalu pegang KTP dekat wajah pada bingkai.';
       case DocumentCaptureType.suratTugas:
         return 'Posisikan seluruh halaman surat tugas di dalam bingkai.';
+      case DocumentCaptureType.sppi:
+        return 'Posisikan seluruh halaman surat SPPI di dalam bingkai.';
     }
   }
 
@@ -393,7 +395,7 @@ class _GuidePainter extends CustomPainter {
       canvas.drawPath(guide, overlay);
       canvas.drawRRect(rounded, framePaint);
       _drawCorners(canvas, rect, framePaint, radius: 18);
-    } else if (type == DocumentCaptureType.suratTugas) {
+    } else if (type == DocumentCaptureType.suratTugas || type == DocumentCaptureType.sppi) {
       final height = size.height * 0.58;
       final rect = Rect.fromCenter(
         center: Offset(size.width / 2, size.height * 0.43),
