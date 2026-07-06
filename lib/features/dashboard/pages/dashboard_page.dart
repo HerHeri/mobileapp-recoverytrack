@@ -30,6 +30,7 @@ class _DashboardPageState extends State<DashboardPage>
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasSearched = false;
+  bool _hasResolvedSearch = false;
 
   // --- Keyboard state ---
   final TextEditingController _controller = TextEditingController();
@@ -299,6 +300,7 @@ class _DashboardPageState extends State<DashboardPage>
         _results = [];
         _meta = null;
         _hasSearched = false;
+        _hasResolvedSearch = false;
         _errorMessage = null;
         _isLoading = false;
         _isSearchInFlight = false;
@@ -314,6 +316,7 @@ class _DashboardPageState extends State<DashboardPage>
         _meta = cachedResult['meta'] as SearchMeta?;
         _isLoading = false;
         _hasSearched = true;
+        _hasResolvedSearch = true;
         _errorMessage = null;
       });
       return;
@@ -327,6 +330,7 @@ class _DashboardPageState extends State<DashboardPage>
         _meta = prefixCachedResult['meta'] as SearchMeta?;
         _isLoading = false;
         _hasSearched = true;
+        _hasResolvedSearch = true;
         _errorMessage = null;
       });
       return;
@@ -342,6 +346,7 @@ class _DashboardPageState extends State<DashboardPage>
         _isLoading = true;
         _errorMessage = null;
         _hasSearched = true;
+        _hasResolvedSearch = false;
         _isSearchInFlight = true;
       });
 
@@ -362,6 +367,7 @@ class _DashboardPageState extends State<DashboardPage>
           _results = results;
           _meta = meta;
           _isLoading = false;
+          _hasResolvedSearch = true;
           _isSearchInFlight = false;
         });
         unawaited(ResultCard.preloadLocation());
@@ -369,12 +375,14 @@ class _DashboardPageState extends State<DashboardPage>
         if (!mounted) return;
         setState(() {
           _isLoading = false;
+          _hasResolvedSearch = true;
           _isSearchInFlight = false;
         });
       } catch (e) {
         if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _isLoading = false;
+          _hasResolvedSearch = true;
           _isSearchInFlight = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
@@ -576,10 +584,10 @@ class _DashboardPageState extends State<DashboardPage>
                               )
                             : !_hasSearched
                             ? const SizedBox.shrink()
+                            : !_hasResolvedSearch
+                            ? const SizedBox.shrink()
                             : _results.isEmpty
-                            ? _isLoading
-                                  ? const SizedBox.shrink()
-                                  : Center(
+                            ? Center(
                                       child: Column(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
