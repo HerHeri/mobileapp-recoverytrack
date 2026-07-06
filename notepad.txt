@@ -9,3 +9,7 @@ next update 1.0.11+11
 
 1. Perbaikan isi cabang di detail kendaraan
 2. Tulisan Perlu Validasi di ganti dengan Wajib Validasi
+
+next update 1.0.16+16
+1. ada bug error akses di batasi ketika melakukan pencarian, kadang bisa kadang tidak
+2. percepat pencariannya lagi

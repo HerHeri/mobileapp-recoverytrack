@@ -7,13 +7,14 @@ import '../storage/token_storage.dart';
 
 class KendaraanService {
   static String get _base => ApiConfig.baseUrl;
-  static const _requestTimeout = Duration(seconds: 15);
-  static const _searchCacheLifetime = Duration(seconds: 30);
+  static const _requestTimeout = Duration(seconds: 6);
+  static const _searchCacheLifetime = Duration(seconds: 45);
   static const _detailCacheLifetime = Duration(minutes: 2);
 
   static final http.Client _client = http.Client();
   static final Map<String, _CacheEntry<Map<String, dynamic>>> _searchCache = {};
   static final Map<int, _CacheEntry<Map<String, dynamic>>> _detailCache = {};
+  static int _requestSeq = 0;
 
   /// GET /v1/cari/kendaraan?q=...&field=...&limit=...
   static Future<Map<String, dynamic>> search(
@@ -28,6 +29,7 @@ class KendaraanService {
       return cached.value;
     }
 
+    final requestId = ++_requestSeq;
     final token = await TokenStorage.getToken();
     final url = Uri.parse('$_base/cari/kendaraan').replace(
       queryParameters: {
@@ -42,6 +44,9 @@ class KendaraanService {
       final response = await _client
           .get(url, headers: headers)
           .timeout(_requestTimeout);
+      if (requestId != _requestSeq) {
+        throw const SearchCancelledException();
+      }
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
@@ -75,7 +80,9 @@ class KendaraanService {
     }
   }
 
-  static void cancelSearch() {}
+  static void cancelSearch() {
+    _requestSeq++;
+  }
 
   static void _removeExpiredSearchCache() {
     _searchCache.removeWhere(

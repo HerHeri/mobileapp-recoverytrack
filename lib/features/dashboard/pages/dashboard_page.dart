@@ -50,6 +50,11 @@ class _DashboardPageState extends State<DashboardPage>
   Timer? _focusTimer;
   bool _updateChecked = false;
   int _searchRequestId = 0;
+  bool _isSearchInFlight = false;
+
+  // --- Search cache (local caching) ---
+  Map<String, List<Kendaraan>> _searchCache = {};
+  Map<String, SearchMeta?> _searchMetaCache = {};
 
   // --- Profile completeness state ---
   List<String> _missingDocuments = [];
@@ -119,6 +124,125 @@ class _DashboardPageState extends State<DashboardPage>
     _loadSettings();
   }
 
+  void _onFilterChange(String newFilter) {
+    // Clear cache saat filter berubah karena hasil akan berbeda
+    _clearSearchCache();
+    setState(() => _filter = newFilter);
+    _handleSearch(_controller.text, newFilter);
+  }
+
+  String _normalizeSearchQuery(String query) {
+    return query.trim().toUpperCase();
+  }
+
+  /// Generate cache key dari query dan filter
+  String _generateCacheKey(String query, String filter) {
+    return '$filter:${_normalizeSearchQuery(query)}';
+  }
+
+  /// Ambil hasil dari cache jika tersedia
+  Map<String, dynamic>? _getCachedResult(String query, String filter) {
+    final key = _generateCacheKey(query, filter);
+    final cachedData = _searchCache[key];
+    final cachedMeta = _searchMetaCache[key];
+
+    if (cachedData != null && cachedMeta != null) {
+      return {'data': cachedData, 'meta': cachedMeta};
+    }
+    return null;
+  }
+
+  /// Simpan hasil ke cache
+  void _saveCacheResult(
+    String query,
+    String filter,
+    List<Kendaraan> data,
+    SearchMeta? meta,
+  ) {
+    final key = _generateCacheKey(query, filter);
+    _searchCache[key] = data;
+    _searchMetaCache[key] = meta;
+  }
+
+  Map<String, dynamic>? _getPrefixCachedResult(String query, String filter) {
+    final normalizedQuery = _normalizeSearchQuery(query);
+    if (normalizedQuery.length < 3) {
+      return null;
+    }
+
+    final prefix = '$filter:';
+    final matchingKeys = _searchCache.keys
+        .where((key) => key.startsWith(prefix))
+        .toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    for (final key in matchingKeys) {
+      final cachedQuery = key.substring(prefix.length);
+      final cachedMeta = _searchMetaCache[key];
+      final cachedData = _searchCache[key];
+
+      if (cachedData == null || cachedMeta == null) {
+        continue;
+      }
+
+      final normalizedCachedQuery = _normalizeSearchQuery(cachedQuery);
+      if (normalizedCachedQuery.isEmpty ||
+          normalizedCachedQuery.length >= normalizedQuery.length ||
+          !normalizedQuery.startsWith(normalizedCachedQuery)) {
+        continue;
+      }
+
+      final filteredData = _filterResultsByQuery(
+        cachedData,
+        normalizedQuery,
+        filter,
+      );
+
+      if (filteredData.isNotEmpty) {
+        return {'data': filteredData, 'meta': cachedMeta};
+      }
+    }
+
+    return null;
+  }
+
+  List<Kendaraan> _filterResultsByQuery(
+    List<Kendaraan> source,
+    String query,
+    String filter,
+  ) {
+    final normalizedQuery = _normalizeSearchQuery(query);
+
+    return source.where((item) {
+      final values = <String>[];
+      switch (filter) {
+        case 'no_polisi':
+          values.add(_normalizeSearchQuery(item.noPolisi));
+          break;
+        case 'no_mesin':
+          values.add(_normalizeSearchQuery(item.noMesin ?? ''));
+          break;
+        case 'no_rangka':
+          values.add(_normalizeSearchQuery(item.noRangka ?? ''));
+          break;
+        default:
+          values.add(_normalizeSearchQuery(item.noPolisi));
+          values.add(_normalizeSearchQuery(item.noMesin ?? ''));
+          values.add(_normalizeSearchQuery(item.noRangka ?? ''));
+      }
+
+      return values.any(
+        (value) => value.contains(normalizedQuery),
+      );
+    }).toList();
+  }
+
+  /// Clear cache (misal saat filter berubah)
+  void _clearSearchCache() {
+    _searchCache.clear();
+    _searchMetaCache.clear();
+  }
+
   /// Check if the user's profile documents are complete.
   /// If not, set [_missingDocuments] so the banner is shown.
   Future<void> _checkProfileCompleteness() async {
@@ -130,8 +254,7 @@ class _DashboardPageState extends State<DashboardPage>
           response;
 
       final missing = <String>[];
-      if (data['ktp_photo'] == null ||
-          data['ktp_photo'].toString().isEmpty) {
+      if (data['ktp_photo'] == null || data['ktp_photo'].toString().isEmpty) {
         missing.add('Foto KTP');
       }
       if (data['selfie_ktp_photo'] == null ||
@@ -142,8 +265,7 @@ class _DashboardPageState extends State<DashboardPage>
           data['surat_tugas_photo'].toString().isEmpty) {
         missing.add('Surat Tugas');
       }
-      if (data['sppi_photo'] == null ||
-          data['sppi_photo'].toString().isEmpty) {
+      if (data['sppi_photo'] == null || data['sppi_photo'].toString().isEmpty) {
         missing.add('Foto SPPI');
       }
 
@@ -162,8 +284,7 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
-
-  // --- Search logic with debounce ---
+  // --- Search logic with debounce & local cache ---
   Future<void> _handleSearch(String query, String filter) async {
     _debounce?.cancel();
     if (_profileCheckDone && _missingDocuments.isNotEmpty) {
@@ -180,16 +301,48 @@ class _DashboardPageState extends State<DashboardPage>
         _hasSearched = false;
         _errorMessage = null;
         _isLoading = false;
+        _isSearchInFlight = false;
       });
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 120), () async {
+    final cachedResult = _getCachedResult(normalizedQuery, filter);
+    if (cachedResult != null) {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _results = cachedResult['data'] as List<Kendaraan>;
+        _meta = cachedResult['meta'] as SearchMeta?;
+        _isLoading = false;
+        _hasSearched = true;
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    final prefixCachedResult = _getPrefixCachedResult(normalizedQuery, filter);
+    if (prefixCachedResult != null) {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _results = prefixCachedResult['data'] as List<Kendaraan>;
+        _meta = prefixCachedResult['meta'] as SearchMeta?;
+        _isLoading = false;
+        _hasSearched = true;
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    if (_isSearchInFlight) {
+      KendaraanService.cancelSearch();
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 100), () async {
       if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _isLoading = true;
         _errorMessage = null;
         _hasSearched = true;
+        _isSearchInFlight = true;
       });
 
       try {
@@ -198,18 +351,31 @@ class _DashboardPageState extends State<DashboardPage>
           field: filter,
         );
         if (!mounted || requestId != _searchRequestId) return;
+
+        final results = response['data'] as List<Kendaraan>;
+        final meta = response['meta'] as SearchMeta;
+
+        // Simpan ke cache
+        _saveCacheResult(normalizedQuery, filter, results, meta);
+
         setState(() {
-          _results = response['data'] as List<Kendaraan>;
-          _meta = response['meta'] as SearchMeta;
+          _results = results;
+          _meta = meta;
           _isLoading = false;
+          _isSearchInFlight = false;
         });
         unawaited(ResultCard.preloadLocation());
       } on SearchCancelledException {
-        // A newer query has replaced this request.
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _isSearchInFlight = false;
+        });
       } catch (e) {
         if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _isLoading = false;
+          _isSearchInFlight = false;
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
       }
@@ -322,6 +488,7 @@ class _DashboardPageState extends State<DashboardPage>
     _controller.dispose();
     _focusNode.dispose();
     _animController.dispose();
+    _clearSearchCache();
     WakelockPlus.disable();
     super.dispose();
   }
@@ -360,9 +527,7 @@ class _DashboardPageState extends State<DashboardPage>
               children: [
                 // --- Profile incomplete banner (blocks search) ---
                 if (isProfileIncomplete)
-                  ProfileIncompleteBanner(
-                    missingDocuments: _missingDocuments,
-                  ),
+                  ProfileIncompleteBanner(missingDocuments: _missingDocuments),
 
                 // --- Results area (Expanded so it takes remaining space) ---
                 Expanded(
@@ -465,10 +630,7 @@ class _DashboardPageState extends State<DashboardPage>
                       onSearch: _handleSearch,
                       controller: _controller,
                       filter: _filter,
-                      onFilterChanged: (v) {
-                        setState(() => _filter = v);
-                        _handleSearch(_controller.text, v);
-                      },
+                      onFilterChanged: _onFilterChange,
                       readOnly: isCustomKeyboard && _keyboardVisible,
                       focusNode: _focusNode,
                       textSize: (_textSize * 0.65).clamp(18.0, 32.0),
