@@ -336,7 +336,7 @@ class _DashboardPageState extends State<DashboardPage>
       KendaraanService.cancelSearch();
     }
 
-    _debounce = Timer(const Duration(milliseconds: 100), () async {
+    _debounce = Timer(const Duration(milliseconds: 60), () async {
       if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _isLoading = true;

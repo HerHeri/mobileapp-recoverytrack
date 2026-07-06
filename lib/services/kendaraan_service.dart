@@ -7,7 +7,7 @@ import '../storage/token_storage.dart';
 
 class KendaraanService {
   static String get _base => ApiConfig.baseUrl;
-  static const _requestTimeout = Duration(seconds: 6);
+  static const _requestTimeout = Duration(seconds: 4);
   static const _searchCacheLifetime = Duration(seconds: 45);
   static const _detailCacheLifetime = Duration(minutes: 2);
 
@@ -58,6 +58,14 @@ class KendaraanService {
             'data': results.map((j) => Kendaraan.fromJson(j)).toList(),
             'meta': SearchMeta.fromJson(metaJson),
           };
+
+          if ((parsed['data'] as List<Kendaraan>).isEmpty && field != 'all') {
+            final fallback = await search(normalizedQuery, field: 'all', limit: limit);
+            if ((fallback['data'] as List<Kendaraan>).isNotEmpty) {
+              return fallback;
+            }
+          }
+
           _searchCache[cacheKey] = _CacheEntry(parsed);
           _removeExpiredSearchCache();
           return parsed;
