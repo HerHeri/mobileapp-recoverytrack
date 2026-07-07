@@ -172,10 +172,9 @@ class _DashboardPageState extends State<DashboardPage>
     }
 
     final prefix = '$filter:';
-    final matchingKeys = _searchCache.keys
-        .where((key) => key.startsWith(prefix))
-        .toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
+    final matchingKeys =
+        _searchCache.keys.where((key) => key.startsWith(prefix)).toList()
+          ..sort((a, b) => b.length.compareTo(a.length));
 
     for (final key in matchingKeys) {
       final cachedQuery = key.substring(prefix.length);
@@ -232,9 +231,7 @@ class _DashboardPageState extends State<DashboardPage>
           values.add(_normalizeSearchQuery(item.noRangka ?? ''));
       }
 
-      return values.any(
-        (value) => value.contains(normalizedQuery),
-      );
+      return values.any((value) => value.contains(normalizedQuery));
     }).toList();
   }
 
@@ -588,31 +585,27 @@ class _DashboardPageState extends State<DashboardPage>
                             ? const SizedBox.shrink()
                             : _results.isEmpty
                             ? Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.search_off_rounded,
-                                            size: 64,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            "Data tidak ditemukan",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.search_off_rounded,
+                                      size: 64,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "Data tidak ditemukan",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    )
+                                    ),
+                                  ],
+                                ),
+                              )
                             : ListView.builder(
                                 itemCount: _results.length,
                                 itemBuilder: (context, index) {

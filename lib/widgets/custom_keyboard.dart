@@ -61,11 +61,11 @@ class CustomKeyboard extends StatelessWidget {
   }
 
   double _safeFontSize(double keyHeight) {
-    return math.min(textSize.clamp(18.0, 40.0), keyHeight * 0.75);
+    return textSize + 18;
   }
 
   double _safeIconSize(double keyHeight) {
-    return math.min(keyHeight * 0.42, 28.0);
+    return math.min(keyHeight * 0.70, 48);
   }
 
   double _keyHeight(double maxHeight, int rowCount) {
@@ -149,9 +149,14 @@ class CustomKeyboard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     char,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w900,
                       fontSize: _safeFontSize(keyH),
+                      height: 1,
+                      letterSpacing: -1,
                     ),
                   ),
                 ),

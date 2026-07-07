@@ -33,7 +33,7 @@ class _KeyboardSettingPageState extends State<KeyboardSettingPage> {
     setState(() {
       _selectedType = type;
       _height = height.clamp(190.0, 340.0);
-      _textSize = textSize.clamp(20.0, 72.0);
+      _textSize = textSize.clamp(20.0, 48.0);
       _vibration = vibration;
       _keepScreenOn = keepScreenOn;
     });
@@ -172,9 +172,9 @@ class _KeyboardSettingPageState extends State<KeyboardSettingPage> {
           ),
           Slider(
             value: _textSize,
-            min: 32,
-            max: 72,
-            divisions: 22,
+            min: 20,
+            max: 48,
+            divisions: 74,
             label: '${_textSize.toStringAsFixed(0)} sp',
             onChanged: (v) => setState(() => _textSize = v),
             onChangeEnd: _saveTextSize,
