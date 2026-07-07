@@ -28,6 +28,7 @@ class _DashboardPageState extends State<DashboardPage>
   List<Kendaraan> _results = [];
   SearchMeta? _meta;
   bool _isLoading = false;
+  String? _errorTitle;
   String? _errorMessage;
   bool _hasSearched = false;
   bool _hasResolvedSearch = false;
@@ -298,6 +299,7 @@ class _DashboardPageState extends State<DashboardPage>
         _meta = null;
         _hasSearched = false;
         _hasResolvedSearch = false;
+        _errorTitle = null;
         _errorMessage = null;
         _isLoading = false;
         _isSearchInFlight = false;
@@ -314,6 +316,7 @@ class _DashboardPageState extends State<DashboardPage>
         _isLoading = false;
         _hasSearched = true;
         _hasResolvedSearch = true;
+        _errorTitle = null;
         _errorMessage = null;
       });
       return;
@@ -328,6 +331,7 @@ class _DashboardPageState extends State<DashboardPage>
         _isLoading = false;
         _hasSearched = true;
         _hasResolvedSearch = true;
+        _errorTitle = null;
         _errorMessage = null;
       });
       return;
@@ -341,6 +345,7 @@ class _DashboardPageState extends State<DashboardPage>
       if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _isLoading = true;
+        _errorTitle = null;
         _errorMessage = null;
         _hasSearched = true;
         _hasResolvedSearch = false;
@@ -366,6 +371,8 @@ class _DashboardPageState extends State<DashboardPage>
           _isLoading = false;
           _hasResolvedSearch = true;
           _isSearchInFlight = false;
+          _errorTitle = null;
+          _errorMessage = null;
         });
         unawaited(ResultCard.preloadLocation());
       } on SearchCancelledException {
@@ -375,12 +382,22 @@ class _DashboardPageState extends State<DashboardPage>
           _hasResolvedSearch = true;
           _isSearchInFlight = false;
         });
+      } on SearchAccessException catch (e) {
+        if (!mounted || requestId != _searchRequestId) return;
+        setState(() {
+          _isLoading = false;
+          _hasResolvedSearch = true;
+          _isSearchInFlight = false;
+          _errorTitle = e.title;
+          _errorMessage = e.message;
+        });
       } catch (e) {
         if (!mounted || requestId != _searchRequestId) return;
         setState(() {
           _isLoading = false;
           _hasResolvedSearch = true;
           _isSearchInFlight = false;
+          _errorTitle = 'Pencarian Bermasalah';
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
       }
@@ -555,8 +572,8 @@ class _DashboardPageState extends State<DashboardPage>
                                         color: Colors.red[300],
                                       ),
                                       const SizedBox(height: 16),
-                                      const Text(
-                                        "Akses Dibatasi",
+                                      Text(
+                                        _errorTitle ?? "Pencarian Bermasalah",
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
