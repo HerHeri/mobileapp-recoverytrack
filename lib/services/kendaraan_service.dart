@@ -7,7 +7,7 @@ import '../storage/token_storage.dart';
 
 class KendaraanService {
   static String get _base => ApiConfig.baseUrl;
-  static const _requestTimeout = Duration(seconds: 4);
+  static const _requestTimeout = Duration(seconds: 8);
   static const _searchCacheLifetime = Duration(seconds: 45);
   static const _detailCacheLifetime = Duration(minutes: 2);
 
@@ -70,16 +70,10 @@ class KendaraanService {
           _removeExpiredSearchCache();
           return parsed;
         } else {
-          throw Exception(
-            data['error'] ?? data['message'] ?? 'Terjadi kesalahan',
-          );
+          throw SearchAccessException.fromJson(data, response.statusCode);
         }
       } else {
-        throw Exception(
-          data['error'] ??
-              data['message'] ??
-              'Terjadi kesalahan pada server (${response.statusCode})',
-        );
+        throw SearchAccessException.fromJson(data, response.statusCode);
       }
     } on TimeoutException {
       throw Exception('Pencarian terlalu lama. Silakan coba lagi.');
@@ -237,6 +231,54 @@ class KendaraanService {
 
 class SearchCancelledException implements Exception {
   const SearchCancelledException();
+}
+
+class SearchAccessException implements Exception {
+  final String title;
+  final String message;
+  final String status;
+  final int statusCode;
+
+  const SearchAccessException({
+    required this.title,
+    required this.message,
+    required this.status,
+    required this.statusCode,
+  });
+
+  factory SearchAccessException.fromJson(
+    Map<String, dynamic> data,
+    int statusCode,
+  ) {
+    final status = (data['access_status'] ?? '').toString();
+    final message =
+        (data['error'] ?? data['message'] ?? 'Terjadi kesalahan pada server')
+            .toString();
+    final titleFromServer = data['title']?.toString();
+
+    final isAccessRestriction =
+        status == 'package_pending' ||
+        status == 'package_inactive' ||
+        status == 'pending' ||
+        status == 'inactive';
+
+    final title = titleFromServer ??
+        (status == 'schedule_restricted'
+            ? 'Di luar jam operasional'
+            : isAccessRestriction
+                ? 'Akses Dibatasi'
+                : 'Pencarian Bermasalah');
+
+    return SearchAccessException(
+      title: title,
+      message: message,
+      status: status,
+      statusCode: statusCode,
+    );
+  }
+
+  @override
+  String toString() => message;
 }
 
 class _CacheEntry<T> {
