@@ -59,13 +59,6 @@ class KendaraanService {
             'meta': SearchMeta.fromJson(metaJson),
           };
 
-          if ((parsed['data'] as List<Kendaraan>).isEmpty && field != 'all') {
-            final fallback = await search(normalizedQuery, field: 'all', limit: limit);
-            if ((fallback['data'] as List<Kendaraan>).isNotEmpty) {
-              return fallback;
-            }
-          }
-
           _searchCache[cacheKey] = _CacheEntry(parsed);
           _removeExpiredSearchCache();
           return parsed;
@@ -76,7 +69,20 @@ class KendaraanService {
         throw SearchAccessException.fromJson(data, response.statusCode);
       }
     } on TimeoutException {
-      throw Exception('Pencarian terlalu lama. Silakan coba lagi.');
+      final parsed = <String, dynamic>{
+        'data': <Kendaraan>[],
+        'meta': SearchMeta(
+          query: normalizedQuery,
+          field: field,
+          source: 'timeout',
+          responseTimeMs: _requestTimeout.inMilliseconds.toDouble(),
+          count: 0,
+          limit: limit,
+        ),
+      };
+      _searchCache[cacheKey] = _CacheEntry(parsed);
+      _removeExpiredSearchCache();
+      return parsed;
     } on http.ClientException {
       throw Exception('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
     }
