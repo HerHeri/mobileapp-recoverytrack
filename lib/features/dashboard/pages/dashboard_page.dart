@@ -227,9 +227,7 @@ class _DashboardPageState extends State<DashboardPage>
           values.add(_normalizeSearchQuery(item.noRangka ?? ''));
           break;
         default:
-          values.add(_normalizeSearchQuery(item.noPolisi));
-          values.add(_normalizeSearchQuery(item.noMesin ?? ''));
-          values.add(_normalizeSearchQuery(item.noRangka ?? ''));
+          return false;
       }
 
       return values.any((value) => value.contains(normalizedQuery));
@@ -360,7 +358,7 @@ class _DashboardPageState extends State<DashboardPage>
       KendaraanService.cancelSearch();
     }
 
-    _debounce = Timer(const Duration(milliseconds: 60), () async {
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
       if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _isLoading = true;

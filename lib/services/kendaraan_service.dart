@@ -22,8 +22,9 @@ class KendaraanService {
     String field = 'no_polisi',
     int limit = 20,
   }) async {
+    final selectedField = _validateSearchField(field);
     final normalizedQuery = query.trim().toUpperCase();
-    final cacheKey = '$field|$normalizedQuery|$limit';
+    final cacheKey = '$selectedField|$normalizedQuery|$limit';
     final cached = _searchCache[cacheKey];
     if (cached != null && cached.isFresh(_searchCacheLifetime)) {
       return cached.value;
@@ -34,7 +35,7 @@ class KendaraanService {
     final url = Uri.parse('$_base/cari/kendaraan').replace(
       queryParameters: {
         'q': normalizedQuery,
-        'field': field,
+        'field': selectedField,
         'limit': limit.toString(),
       },
     );
@@ -53,10 +54,28 @@ class KendaraanService {
         if (data['success'] == true) {
           final List<dynamic> results = data['data'] ?? [];
           final Map<String, dynamic> metaJson = data['meta'] ?? {};
+          final vehicles = results
+              .map((j) => Kendaraan.fromJson(j))
+              .where(
+                (item) => _matchesSelectedField(
+                  item,
+                  selectedField,
+                  normalizedQuery,
+                ),
+              )
+              .toList();
+          final serverMeta = SearchMeta.fromJson(metaJson);
 
           final parsed = <String, dynamic>{
-            'data': results.map((j) => Kendaraan.fromJson(j)).toList(),
-            'meta': SearchMeta.fromJson(metaJson),
+            'data': vehicles,
+            'meta': SearchMeta(
+              query: normalizedQuery,
+              field: selectedField,
+              source: serverMeta.source,
+              responseTimeMs: serverMeta.responseTimeMs,
+              count: vehicles.length,
+              limit: limit,
+            ),
           };
 
           _searchCache[cacheKey] = _CacheEntry(parsed);
@@ -73,7 +92,7 @@ class KendaraanService {
         'data': <Kendaraan>[],
         'meta': SearchMeta(
           query: normalizedQuery,
-          field: field,
+          field: selectedField,
           source: 'timeout',
           responseTimeMs: _requestTimeout.inMilliseconds.toDouble(),
           count: 0,
@@ -90,6 +109,48 @@ class KendaraanService {
 
   static void cancelSearch() {
     _requestSeq++;
+  }
+
+  static String _validateSearchField(String field) {
+    const allowedFields = {'no_polisi', 'no_mesin', 'no_rangka'};
+    final normalized = field.trim().toLowerCase();
+
+    if (!allowedFields.contains(normalized)) {
+      throw ArgumentError.value(field, 'field', 'Field pencarian tidak valid');
+    }
+
+    return normalized;
+  }
+
+  static bool _matchesSelectedField(
+    Kendaraan item,
+    String field,
+    String query,
+  ) {
+    final normalizedQuery = _normalizeIdentifier(query);
+    final value = switch (field) {
+      'no_polisi' => item.noPolisi,
+      'no_mesin' => item.noMesin ?? '',
+      'no_rangka' => item.noRangka ?? '',
+      _ => '',
+    };
+    final normalizedValue = _normalizeIdentifier(value);
+
+    if (normalizedQuery.isEmpty || normalizedValue.isEmpty) return false;
+    if (field == 'no_polisi') {
+      return normalizedValue.startsWith(normalizedQuery);
+    }
+
+    return normalizedValue.startsWith(normalizedQuery) ||
+        (normalizedQuery.length >= 4 &&
+            normalizedValue.contains(normalizedQuery));
+  }
+
+  static String _normalizeIdentifier(String value) {
+    return value
+        .trim()
+        .toUpperCase()
+        .replaceAll(RegExp(r'[\s_-]+'), '');
   }
 
   static void _removeExpiredSearchCache() {
