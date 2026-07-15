@@ -242,6 +242,25 @@ class _DashboardPageState extends State<DashboardPage>
     _searchMetaCache.clear();
   }
 
+  String _friendlySearchMessage(Object value) {
+    final message = value.toString().replaceAll('Exception: ', '').trim();
+    final lowerMessage = message.toLowerCase();
+
+    if (lowerMessage.contains('unauthenticated')) {
+      return 'Silakan login kembali untuk melanjutkan pencarian.';
+    }
+
+    if (lowerMessage.contains('error') ||
+        lowerMessage.contains('exception') ||
+        lowerMessage.contains('bermasalah')) {
+      return 'Pencarian belum dapat diproses. Silakan coba lagi.';
+    }
+
+    return message.isEmpty
+        ? 'Pencarian belum dapat diproses. Silakan coba lagi.'
+        : message;
+  }
+
   /// Check if the user's profile documents are complete.
   /// If not, set [_missingDocuments] so the banner is shown.
   Future<void> _checkProfileCompleteness() async {
@@ -278,7 +297,7 @@ class _DashboardPageState extends State<DashboardPage>
         }
       }
     } catch (_) {
-      // If profile check fails, don't block the user — they'll see errors on search
+      // If profile check fails, keep search available and show the server message later.
       if (mounted) setState(() => _profileCheckDone = true);
     }
   }
@@ -397,8 +416,8 @@ class _DashboardPageState extends State<DashboardPage>
           _isLoading = false;
           _hasResolvedSearch = true;
           _isSearchInFlight = false;
-          _errorTitle = 'Pencarian Bermasalah';
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorTitle = 'Pencarian Belum Tersedia';
+          _errorMessage = _friendlySearchMessage(e);
         });
       }
     });
@@ -519,6 +538,10 @@ class _DashboardPageState extends State<DashboardPage>
   Widget build(BuildContext context) {
     final isCustomKeyboard = _keyboardType > 0;
     final theme = Theme.of(context);
+    final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final keyboardBottomPadding = systemBottomInset > 16
+        ? systemBottomInset
+        : 16.0;
 
     return MainLayout(
       activeIndex: 1,
@@ -535,6 +558,7 @@ class _DashboardPageState extends State<DashboardPage>
                 (constraints.maxHeight -
                         searchAreaHeight -
                         keyboardToggleHeight -
+                        keyboardBottomPadding -
                         minimumResultHeight)
                     .clamp(120.0, 420.0);
             final finalKeyboardHeight = _keyboardHeight.clamp(
@@ -567,13 +591,14 @@ class _DashboardPageState extends State<DashboardPage>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(
-                                        Icons.error_outline_rounded,
+                                        Icons.info_outline_rounded,
                                         size: 80,
-                                        color: Colors.red[300],
+                                        color: theme.colorScheme.primary,
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        _errorTitle ?? "Pencarian Bermasalah",
+                                        _errorTitle ??
+                                            "Pencarian Belum Tersedia",
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -679,11 +704,8 @@ class _DashboardPageState extends State<DashboardPage>
                   SizeTransition(
                     sizeFactor: _animSlide,
                     alignment: Alignment.bottomCenter,
-                    child: SafeArea(
-                      top: false,
-                      bottom: false,
-                      left: false,
-                      right: false,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: keyboardBottomPadding),
                       child: AnimatedSize(
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeOutCubic,

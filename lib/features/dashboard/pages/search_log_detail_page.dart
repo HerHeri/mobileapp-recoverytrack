@@ -360,10 +360,12 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Pencarian")),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      body: SafeArea(
+        top: false,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -527,8 +529,9 @@ class _SearchLogDetailPageState extends State<SearchLogDetailPage> {
               ],
             ),
           ),
-          Positioned.fill(child: IgnorePointer(child: _WatermarkOverlay())),
-        ],
+            Positioned.fill(child: IgnorePointer(child: _WatermarkOverlay())),
+          ],
+        ),
       ),
     );
   }

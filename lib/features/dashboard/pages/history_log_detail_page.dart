@@ -223,10 +223,12 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
       'contact_person',
     ]);
 
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+    return SafeArea(
+      top: false,
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -411,8 +413,9 @@ class _HistoryLogDetailPageState extends State<HistoryLogDetailPage> {
             ],
           ),
         ),
-        Positioned.fill(child: IgnorePointer(child: _WatermarkOverlay())),
-      ],
+          Positioned.fill(child: IgnorePointer(child: _WatermarkOverlay())),
+        ],
+      ),
     );
   }
 

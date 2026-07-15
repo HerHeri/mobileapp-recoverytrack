@@ -24,7 +24,6 @@ class MainLayout extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        bottom: false,
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: theme.brightness == Brightness.light

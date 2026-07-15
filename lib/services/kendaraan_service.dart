@@ -257,10 +257,20 @@ class SearchAccessException implements Exception {
     int statusCode,
   ) {
     final status = (data['access_status'] ?? '').toString();
-    final message =
-        (data['error'] ?? data['message'] ?? 'Terjadi kesalahan pada server')
-            .toString();
-    final titleFromServer = data['title']?.toString();
+    final rawMessage = (data['error'] ?? data['message'] ?? '').toString();
+    final titleFromServer = _friendlyTitle(data['title']?.toString());
+    final isUnauthenticated =
+        statusCode == 401 ||
+        rawMessage.toLowerCase().contains('unauthenticated');
+
+    if (isUnauthenticated) {
+      return SearchAccessException(
+        title: 'Sesi Login Berakhir',
+        message: 'Silakan login kembali untuk melanjutkan pencarian.',
+        status: status.isEmpty ? 'unauthenticated' : status,
+        statusCode: statusCode,
+      );
+    }
 
     final isAccessRestriction =
         status == 'package_pending' ||
@@ -268,19 +278,49 @@ class SearchAccessException implements Exception {
         status == 'pending' ||
         status == 'inactive';
 
-    final title = titleFromServer ??
+    final title =
+        titleFromServer ??
         (status == 'schedule_restricted'
             ? 'Di luar jam operasional'
             : isAccessRestriction
-                ? 'Akses Dibatasi'
-                : 'Pencarian Bermasalah');
+            ? 'Akses Dibatasi'
+            : 'Pencarian Belum Tersedia');
 
     return SearchAccessException(
       title: title,
-      message: message,
+      message: rawMessage.isEmpty
+          ? 'Pencarian belum dapat diproses. Silakan coba lagi.'
+          : _friendlyMessage(rawMessage),
       status: status,
       statusCode: statusCode,
     );
+  }
+
+  static String? _friendlyTitle(String? title) {
+    final value = title?.trim();
+    if (value == null || value.isEmpty) return null;
+
+    final lowerValue = value.toLowerCase();
+    if (lowerValue.contains('error') ||
+        lowerValue.contains('exception') ||
+        lowerValue.contains('bermasalah')) {
+      return null;
+    }
+
+    return value;
+  }
+
+  static String _friendlyMessage(String message) {
+    final value = message.trim();
+    final lowerValue = value.toLowerCase();
+
+    if (lowerValue.contains('error') ||
+        lowerValue.contains('exception') ||
+        lowerValue.contains('bermasalah')) {
+      return 'Pencarian belum dapat diproses. Silakan coba lagi.';
+    }
+
+    return value;
   }
 
   @override
