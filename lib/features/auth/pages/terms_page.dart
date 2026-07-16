@@ -16,6 +16,7 @@ class TermsPage extends StatefulWidget {
 
 class _TermsPageState extends State<TermsPage> {
   bool _isLoading = false;
+  bool _isAgreed = false;
 
   Future<void> _handleAccept() async {
     setState(() => _isLoading = true);
@@ -85,6 +86,7 @@ class _TermsPageState extends State<TermsPage> {
           ),
         ),
         child: SafeArea(
+          minimum: const EdgeInsets.only(bottom: 10),
           child: Column(
             children: [
               const SizedBox(height: 30),
@@ -107,7 +109,7 @@ class _TermsPageState extends State<TermsPage> {
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -136,42 +138,107 @@ class _TermsPageState extends State<TermsPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 20,
+                  horizontal: 20,
+                  vertical: 6,
                 ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleAccept,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF764BA2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 4,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF764BA2),
-                            ),
-                          )
-                        : const Text(
-                            "Saya Setuju & Lanjutkan",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                child: Column(
+                  children: [
+                    InkWell(
+                      onTap: _isLoading
+                          ? null
+                          : () => setState(() => _isAgreed = !_isAgreed),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Checkbox(
+                            value: _isAgreed,
+                            onChanged: _isLoading
+                                ? null
+                                : (value) => setState(
+                                    () => _isAgreed = value ?? false,
+                                  ),
+                            activeColor: Colors.white,
+                            checkColor: const Color(0xFF764BA2),
+                            side: const BorderSide(
+                              color: Colors.white,
+                              width: 2,
                             ),
                           ),
-                  ),
+                          const SizedBox(width: 4),
+                          const Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 10),
+                              child: Text(
+                                'Dengan memberikan tanda centang pada kolom ini, '
+                                'Pengguna Aplikasi menyatakan bahwa persetujuan '
+                                'elektronik yang diberikan merupakan tindakan sah '
+                                'yang mengikat secara hukum dan memiliki kekuatan '
+                                'pembuktian sebagaimana persetujuan tertulis '
+                                'berdasarkan ketentuan peraturan perundang-undangan '
+                                'yang berlaku di Republik Indonesia.',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading || !_isAgreed
+                            ? null
+                            : _handleAccept,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF764BA2),
+                          disabledBackgroundColor: Colors.white.withValues(
+                            alpha: 0.45,
+                          ),
+                          disabledForegroundColor: const Color(
+                            0xFF764BA2,
+                          ).withValues(alpha: 0.55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF764BA2),
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.check_circle_rounded, size: 22),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Setuju dan Lanjutkan',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               TextButton(
@@ -181,7 +248,6 @@ class _TermsPageState extends State<TermsPage> {
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                 ),
               ),
-              const SizedBox(height: 10),
             ],
           ),
         ),

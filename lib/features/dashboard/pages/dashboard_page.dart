@@ -309,7 +309,7 @@ class _DashboardPageState extends State<DashboardPage>
     final normalizedQuery = query.trim();
     final requestId = ++_searchRequestId;
 
-    if (normalizedQuery.length < 2) {
+    if (normalizedQuery.length < 3) {
       KendaraanService.cancelSearch();
       setState(() {
         _results = [];
@@ -358,7 +358,7 @@ class _DashboardPageState extends State<DashboardPage>
       KendaraanService.cancelSearch();
     }
 
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
+    _debounce = Timer(const Duration(milliseconds: 100), () async {
       if (!mounted || requestId != _searchRequestId) return;
       setState(() {
         _isLoading = true;
@@ -536,10 +536,9 @@ class _DashboardPageState extends State<DashboardPage>
   Widget build(BuildContext context) {
     final isCustomKeyboard = _keyboardType > 0;
     final theme = Theme.of(context);
-    final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final keyboardBottomPadding = systemBottomInset > 16
-        ? systemBottomInset
-        : 16.0;
+    final keyboardBottomPadding = MediaQuery.viewPaddingOf(context).bottom > 0
+        ? 1.0
+        : 2.0;
 
     return MainLayout(
       activeIndex: 1,
@@ -547,6 +546,7 @@ class _DashboardPageState extends State<DashboardPage>
       onKeyboardSettings: _openSettings,
       child: SafeArea(
         top: false,
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             const searchAreaHeight = 76.0;
@@ -558,11 +558,11 @@ class _DashboardPageState extends State<DashboardPage>
                         keyboardToggleHeight -
                         keyboardBottomPadding -
                         minimumResultHeight)
-                    .clamp(120.0, 420.0);
-            final finalKeyboardHeight = _keyboardHeight.clamp(
-              120.0,
-              availableKeyboardHeight,
-            );
+                    .clamp(0.0, 420.0)
+                    .toDouble();
+            final finalKeyboardHeight = _keyboardHeight
+                .clamp(0.0, availableKeyboardHeight)
+                .toDouble();
 
             final isProfileIncomplete =
                 _profileCheckDone && _missingDocuments.isNotEmpty;

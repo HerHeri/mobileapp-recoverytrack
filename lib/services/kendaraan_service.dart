@@ -57,11 +57,8 @@ class KendaraanService {
           final vehicles = results
               .map((j) => Kendaraan.fromJson(j))
               .where(
-                (item) => _matchesSelectedField(
-                  item,
-                  selectedField,
-                  normalizedQuery,
-                ),
+                (item) =>
+                    _matchesSelectedField(item, selectedField, normalizedQuery),
               )
               .toList();
           final serverMeta = SearchMeta.fromJson(metaJson);
@@ -137,20 +134,11 @@ class KendaraanService {
     final normalizedValue = _normalizeIdentifier(value);
 
     if (normalizedQuery.isEmpty || normalizedValue.isEmpty) return false;
-    if (field == 'no_polisi') {
-      return normalizedValue.startsWith(normalizedQuery);
-    }
-
-    return normalizedValue.startsWith(normalizedQuery) ||
-        (normalizedQuery.length >= 4 &&
-            normalizedValue.contains(normalizedQuery));
+    return normalizedValue.contains(normalizedQuery);
   }
 
   static String _normalizeIdentifier(String value) {
-    return value
-        .trim()
-        .toUpperCase()
-        .replaceAll(RegExp(r'[\s_-]+'), '');
+    return value.trim().toUpperCase().replaceAll(RegExp(r'[\s_-]+'), '');
   }
 
   static void _removeExpiredSearchCache() {

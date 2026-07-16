@@ -53,15 +53,28 @@ class DisclaimerCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(text: 'Data yang ditampilkan '),
+                      TextSpan(text: 'Informasi kendaraan dalam Aplikasi '),
                       TextSpan(
-                        text: 'bukan\nbukti sah identitas kendaraan',
+                        text: 'bersifat referensi awal',
                         style: TextStyle(color: Color(0xFFFFC857)),
                       ),
-                      TextSpan(text: ',\nmenunggak angsuran, dan '),
+                      TextSpan(text: ' dan '),
                       TextSpan(
-                        text: 'bukan\nalat untuk mengamankan kendaraan.',
+                        text:
+                            'tidak dapat digunakan sebagai dasar penentuan '
+                            'status tunggakan maupun tindakan terhadap kendaraan.',
                         style: TextStyle(color: Color(0xFFFFC857)),
+                      ),
+                      TextSpan(text: ' Pengguna '),
+                      TextSpan(
+                        text:
+                            'wajib melakukan verifikasi kepada pihak terkait.',
+                        style: TextStyle(color: Color(0xFFFFC857)),
+                      ),
+                      TextSpan(
+                        text:
+                            ' Setiap penyalahgunaan informasi sepenuhnya '
+                            'menjadi tanggung jawab Pengguna',
                       ),
                     ],
                   ),

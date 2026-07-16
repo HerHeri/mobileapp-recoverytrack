@@ -68,8 +68,8 @@ class CustomKeyboard extends StatelessWidget {
     return math.min(keyHeight * 0.70, 48);
   }
 
-  double _keyHeight(double maxHeight, int rowCount) {
-    final available = maxHeight - ((rowCount - 1) * _gap);
+  double _keyHeight(double maxHeight, int rowCount, {double rowGap = 1}) {
+    final available = maxHeight - ((rowCount - 1) * rowGap);
     return available / rowCount;
   }
 
@@ -245,11 +245,11 @@ class CustomKeyboard extends StatelessWidget {
     return widgets;
   }
 
-  Widget _column(List<Widget> rows, double rowHeight, {double rowGap = 1}) {
+  Widget _column(List<Widget> rows, {double rowGap = 1}) {
     return Column(
       children: [
         for (int i = 0; i < rows.length; i++) ...[
-          SizedBox(height: rowHeight, child: rows[i]),
+          Expanded(child: rows[i]),
           if (i < rows.length - 1) SizedBox(height: rowGap),
         ],
       ],
@@ -262,26 +262,22 @@ class CustomKeyboard extends StatelessWidget {
   // ===================================================================
   Widget _layout1(double maxH) {
     const rowCount = 4;
-    final kH = _keyHeight(maxH, rowCount) - 3;
+    final kH = _keyHeight(maxH, rowCount, rowGap: 0);
 
-    return _column(
-      [
-        _indentRow('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
-        _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        _indentRow([
-          // _ghost(kH),
-          ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-          // _ghost(kH),
-        ]),
-        _indentRow([
-          _clearKey(kH, flex: 1),
-          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-          _backspaceKey(kH, flex: 1),
-        ]),
-      ],
-      73,
-      rowGap: 0,
-    );
+    return _column([
+      _indentRow('1234567890'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow([
+        // _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        // _ghost(kH),
+      ]),
+      _indentRow([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ], rowGap: 0);
   }
 
   // ===================================================================
@@ -290,51 +286,47 @@ class CustomKeyboard extends StatelessWidget {
   // ===================================================================
   Widget _layout2(double maxH) {
     const rowCount = 7;
-    final kH = _keyHeight(maxH, rowCount) + 4;
+    final kH = _keyHeight(maxH, rowCount, rowGap: 2);
 
-    return _column(
-      [
-        _indentRow([_charKey('1', kH), _charKey('2', kH), _charKey('3', kH)]),
+    return _column([
+      _indentRow([_charKey('1', kH), _charKey('2', kH), _charKey('3', kH)]),
 
-        _indentRow(
-          [_charKey('4', kH), _charKey('5', kH), _charKey('6', kH)],
-          left: 0,
-          right: 0,
-        ),
+      _indentRow(
+        [_charKey('4', kH), _charKey('5', kH), _charKey('6', kH)],
+        left: 0,
+        right: 0,
+      ),
 
-        _indentRow(
-          [_charKey('7', kH), _charKey('8', kH), _charKey('9', kH)],
-          left: 0,
-          right: 0,
-        ),
+      _indentRow(
+        [_charKey('7', kH), _charKey('8', kH), _charKey('9', kH)],
+        left: 0,
+        right: 0,
+      ),
 
-        _indentRow(
-          [_clearKey(kH), _charKey('0', kH), _backspaceKey(kH)],
-          left: 0,
-          right: 0,
-        ),
+      _indentRow(
+        [_clearKey(kH), _charKey('0', kH), _backspaceKey(kH)],
+        left: 0,
+        right: 0,
+      ),
 
-        _indentRow('QWERTYUIOP'.split('').map((e) => _charKey(e, kH)).toList()),
+      _indentRow('QWERTYUIOP'.split('').map((e) => _charKey(e, kH)).toList()),
 
-        _indentRow(
-          'ASDFGHJKL'.split('').map((e) => _charKey(e, kH)).toList(),
-          left: 0,
-          right: 0,
-        ),
+      _indentRow(
+        'ASDFGHJKL'.split('').map((e) => _charKey(e, kH)).toList(),
+        left: 0,
+        right: 0,
+      ),
 
-        _indentRow(
-          [
-            _clearKey(kH),
-            ...'ZXCVBNM'.split('').map((e) => _charKey(e, kH)),
-            _backspaceKey(kH),
-          ],
-          left: 0,
-          right: 0,
-        ),
-      ],
-      40,
-      rowGap: 2,
-    );
+      _indentRow(
+        [
+          _clearKey(kH),
+          ...'ZXCVBNM'.split('').map((e) => _charKey(e, kH)),
+          _backspaceKey(kH),
+        ],
+        left: 0,
+        right: 0,
+      ),
+    ], rowGap: 2);
   }
 
   // ===================================================================
@@ -342,27 +334,23 @@ class CustomKeyboard extends StatelessWidget {
   // ===================================================================
   Widget _layout3(double maxH) {
     const rowCount = 5;
-    final kH = _keyHeight(maxH, rowCount) - 5;
+    final kH = _keyHeight(maxH, rowCount);
 
-    return _column(
-      [
-        _indentRow('12345'.split('').map((c) => _charKey(c, kH)).toList()),
-        _indentRow('67890'.split('').map((c) => _charKey(c, kH)).toList()),
-        _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
-        _indentRow([
-          // _ghost(kH),
-          ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
-          // _ghost(kH),
-        ]),
-        _indentRow([
-          _clearKey(kH, flex: 1),
-          ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
-          _backspaceKey(kH, flex: 1),
-        ]),
-      ],
-      57,
-      rowGap: 1,
-    );
+    return _column([
+      _indentRow('12345'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow('67890'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow('QWERTYUIOP'.split('').map((c) => _charKey(c, kH)).toList()),
+      _indentRow([
+        // _ghost(kH),
+        ...'ASDFGHJKL'.split('').map((c) => _charKey(c, kH)),
+        // _ghost(kH),
+      ]),
+      _indentRow([
+        _clearKey(kH, flex: 1),
+        ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
+        _backspaceKey(kH, flex: 1),
+      ]),
+    ], rowGap: 1);
   }
 
   // ===================================================================
@@ -413,7 +401,7 @@ class CustomKeyboard extends StatelessWidget {
         _charKey('-', kH),
         _backspaceKey(kH, flex: 2),
       ]),
-    ], 48);
+    ]);
   }
 
   // ===================================================================
@@ -453,7 +441,7 @@ class CustomKeyboard extends StatelessWidget {
         ...'ZXCVBNM'.split('').map((c) => _charKey(c, kH)),
         _backspaceKey(kH, flex: 1),
       ]),
-    ], 48);
+    ]);
   }
 
   Widget _buildLayout(double maxH) {
@@ -478,14 +466,6 @@ class CustomKeyboard extends StatelessWidget {
     final maxHeight = MediaQuery.of(context).size.height * 0.38;
 
     final safeHeight = math.min(height, maxHeight);
-
-    final rowCount = switch (layoutType) {
-      2 => 7,
-      4 => 6,
-      5 => 6,
-      3 => 5,
-      _ => 4,
-    };
 
     return SizedBox(
       width: double.infinity,
