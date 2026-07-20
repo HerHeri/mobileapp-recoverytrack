@@ -11,7 +11,7 @@ class KeyboardSettingPage extends StatefulWidget {
 
 class _KeyboardSettingPageState extends State<KeyboardSettingPage> {
   int _selectedType = 1;
-  double _height = 270;
+  double _height = 300;
   double _textSize = 34;
   bool _vibration = true;
   bool _keepScreenOn = false;

@@ -175,7 +175,7 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
               onChanged: (_) => setState(_applyFilter),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 0),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -190,14 +190,14 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: _fetchHistory,
                 child: const Text("Coba Lagi"),
@@ -245,13 +245,23 @@ class _HistoryLogPageState extends State<HistoryLogPage> {
           }
 
           return ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.search)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 4, // Padding kanan dan kiri
+              vertical: 0,
+            ),
+            leading: const CircleAvatar(child: Icon(Icons.search, size: 20)),
             title: Text(
               query,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
             ),
-            subtitle: Text(formattedDate),
-            trailing: const Icon(Icons.chevron_right, size: 16),
+            subtitle: Text(
+              formattedDate,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 28),
             onTap: () {
               final id = int.tryParse(item['id']?.toString() ?? '');
               if (id != null) {

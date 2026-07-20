@@ -17,7 +17,7 @@ class SearchCard extends StatefulWidget {
     required this.onFilterChanged,
     this.readOnly = false,
     this.focusNode,
-    this.textSize = 18,
+    this.textSize = 24,
   });
 
   @override
@@ -62,12 +62,12 @@ class _SearchCardState extends State<SearchCard> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(
-                    left: compact ? 14 : 18,
+                    left: compact ? 3 : 5,
                     right: compact ? 7 : 12,
                   ),
                   child: Icon(
                     Icons.search_rounded,
-                    size: compact ? 24 : 27,
+                    size: compact ? 30 : 34,
                     color: theme.colorScheme.primary,
                   ),
                 ),
@@ -79,7 +79,7 @@ class _SearchCardState extends State<SearchCard> {
                     showCursor: true,
                     textCapitalization: TextCapitalization.characters,
                     style: TextStyle(
-                      fontSize: compact ? 16 : 18,
+                      fontSize: compact ? 28 : 34,
                       color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
@@ -90,14 +90,14 @@ class _SearchCardState extends State<SearchCard> {
                     decoration: InputDecoration(
                       hintText: "Pencarian",
                       hintStyle: TextStyle(
-                        fontSize: compact ? 15 : 17,
+                        fontSize: compact ? 28 : 34,
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w400,
                       ),
                       border: InputBorder.none,
                       filled: false,
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 5),
                     ),
                   ),
                 ),
@@ -156,7 +156,7 @@ class _SearchCardState extends State<SearchCard> {
                           Text(
                             _filterLabel(widget.filter),
                             style: TextStyle(
-                              fontSize: compact ? 12 : 14,
+                              fontSize: compact ? 20 : 24,
                               color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.w700,
                             ),

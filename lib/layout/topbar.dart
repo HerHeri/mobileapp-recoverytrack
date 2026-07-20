@@ -202,7 +202,7 @@ class TopBar extends StatelessWidget {
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 18,
                             letterSpacing: -0.2,
                           ),
                         ),
@@ -211,7 +211,7 @@ class TopBar extends StatelessWidget {
                             "v$version",
                             style: const TextStyle(
                               color: Colors.white70,
-                              fontSize: 11,
+                              fontSize: 13,
                             ),
                           ),
                       ],
@@ -451,7 +451,7 @@ class TopBar extends StatelessWidget {
                   item.label,
                   style: TextStyle(
                     color: color,
-                    fontSize: 14.5,
+                    fontSize: 16,
                     fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
                   ),
                 ),
@@ -464,7 +464,7 @@ class TopBar extends StatelessWidget {
                     color: destructive
                         ? color.withValues(alpha: 0.72)
                         : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 11.5,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -523,7 +523,7 @@ class _AdminMenuItemWrapper extends StatelessWidget {
           right: 4,
           top: 4,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
             decoration: BoxDecoration(
               color: const Color(0xFF536DFE).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
@@ -534,7 +534,7 @@ class _AdminMenuItemWrapper extends StatelessWidget {
             child: const Text(
               'ADMIN',
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 13,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF536DFE),
                 letterSpacing: 0.3,

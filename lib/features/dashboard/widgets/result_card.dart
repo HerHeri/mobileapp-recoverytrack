@@ -127,7 +127,7 @@ class _ResultCardState extends State<ResultCard> {
     final theme = Theme.of(context);
     final baseStyle = TextStyle(
       color: theme.colorScheme.primary,
-      fontSize: 20,
+      fontSize: 28,
       fontWeight: FontWeight.w800,
       decoration: TextDecoration.underline,
       decorationColor: theme.colorScheme.primary.withValues(alpha: 0.45),

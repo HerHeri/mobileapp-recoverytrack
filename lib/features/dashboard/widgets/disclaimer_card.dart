@@ -74,7 +74,7 @@ class DisclaimerCard extends StatelessWidget {
                       TextSpan(
                         text:
                             ' Setiap penyalahgunaan informasi sepenuhnya '
-                            'menjadi tanggung jawab Pengguna',
+                            'menjadi tanggung jawab pengguna',
                       ),
                     ],
                   ),
@@ -111,12 +111,12 @@ class DisclaimerCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(text: 'Untuk validasi '),
+                      TextSpan(text: 'Untuk validasi akurasi data'),
                       TextSpan(
                         text: 'wajib konfirmasi',
                         style: TextStyle(color: Color(0xFFFFD34E)),
                       ),
-                      TextSpan(text: '\nke perusahaan Pembiayaan terkait'),
+                      TextSpan(text: '\nke perusahaan pembiayaan terkait'),
                     ],
                   ),
                   style: TextStyle(

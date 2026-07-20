@@ -10,7 +10,6 @@ import '../../../layout/main_layout.dart';
 import '../../../storage/token_storage.dart';
 import 'package:intl/intl.dart';
 
-
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -396,8 +395,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final isProfileApproved =
         data['paket_status']?.toString().toLowerCase() == 'approved';
 
-
-
     final hasKtp =
         data['ktp_photo'] != null && data['ktp_photo'].toString().isNotEmpty;
     final hasSelfie =
@@ -407,8 +404,7 @@ class _ProfilePageState extends State<ProfilePage> {
         data['surat_tugas_photo'] != null &&
         data['surat_tugas_photo'].toString().isNotEmpty;
     final hasSppi =
-        data['sppi_photo'] != null &&
-        data['sppi_photo'].toString().isNotEmpty;
+        data['sppi_photo'] != null && data['sppi_photo'].toString().isNotEmpty;
     final isPhotosIncomplete = !hasKtp || !hasSelfie || !hasSurat || !hasSppi;
 
     // API menggunakan field "expired", bukan "exp"
@@ -476,14 +472,14 @@ class _ProfilePageState extends State<ProfilePage> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.green,
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Data profil Anda telah disetujui oleh admin. Anda tetap dapat memperbarui nama, password, dan dokumen pendukung jika diperlukan.',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               color: Colors.green[700],
                               height: 1.4,
                             ),
@@ -763,18 +759,17 @@ class _ProfilePageState extends State<ProfilePage> {
                           labelText: "Password Lama",
                           prefixIcon: const Icon(Icons.lock_reset_outlined),
                           suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureOldPassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureOldPassword =
-                                          !_obscureOldPassword;
-                                    });
-                                  },
-                                ),
+                            icon: Icon(
+                              _obscureOldPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureOldPassword = !_obscureOldPassword;
+                              });
+                            },
+                          ),
                         ),
                         readOnly: false,
                         validator: (v) {
@@ -794,18 +789,17 @@ class _ProfilePageState extends State<ProfilePage> {
                               "Password Baru (Kosongkan jika tidak diubah)",
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureNewPassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureNewPassword =
-                                          !_obscureNewPassword;
-                                    });
-                                  },
-                                ),
+                            icon: Icon(
+                              _obscureNewPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureNewPassword = !_obscureNewPassword;
+                              });
+                            },
+                          ),
                         ),
                         readOnly: false,
                       ),
@@ -846,10 +840,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         title: "Foto SPPI",
                         networkImage: data['sppi_photo'],
                         localImage: _sppiPhoto,
-                        onTap: () => _takeLivePhoto(
-                          DocumentCaptureType.sppi,
-                          'sppi',
-                        ),
+                        onTap: () =>
+                            _takeLivePhoto(DocumentCaptureType.sppi, 'sppi'),
                         isLocked: false,
                       ),
                       const SizedBox(height: 24),
@@ -918,8 +910,8 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.symmetric(vertical: 0),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 12),
+          Icon(icon, size: 24, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
           Text(
             label,
             style: TextStyle(color: theme.colorScheme.onSurfaceVariant),

@@ -40,7 +40,7 @@ class _DashboardPageState extends State<DashboardPage>
 
   int _keyboardType = 0; // 0 = system, 1-5 = custom
   double _keyboardHeight = 280;
-  double _textSize = 20;
+  double _textSize = 36;
   bool _vibrationEnabled = true;
   bool _keyboardVisible = false;
 
