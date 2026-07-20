@@ -111,17 +111,18 @@ class DisclaimerCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(text: 'Untuk validasi akurasi data'),
+                      TextSpan(text: 'Untuk validasi akurasi data '),
                       TextSpan(
                         text: 'wajib konfirmasi',
                         style: TextStyle(color: Color(0xFFFFD34E)),
                       ),
-                      TextSpan(text: '\nke perusahaan pembiayaan terkait'),
+                      TextSpan(text: ' ke perusahaan pembiayaan terkait'),
                     ],
                   ),
+                  textAlign: TextAlign.justify,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: 16,
                     height: 1.45,
                     fontWeight: FontWeight.w700,
                   ),
